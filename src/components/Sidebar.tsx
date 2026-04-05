@@ -23,9 +23,9 @@ export default function Sidebar({
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "rides", label: "Active Rides", icon: Navigation2 },
+    { id: "book", label: "Book Ride", icon: MapPin },
     { id: "earnings", label: "Earnings", icon: TrendingUp },
     { id: "stats", label: "Statistics", icon: BarChart3 },
-    { id: "map", label: "Maps", icon: MapPin },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 

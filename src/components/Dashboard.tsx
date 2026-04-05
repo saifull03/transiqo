@@ -7,6 +7,7 @@ import StatsCards from "./StatsCards";
 import ActiveRides from "./ActiveRides";
 import RecentTrips from "./RecentTrips";
 import DriverProfile from "./DriverProfile";
+import BookRide from "./BookRide";
 
 export default function Dashboard() {
   const [selectedNav, setSelectedNav] = useState("dashboard");
@@ -49,6 +50,7 @@ export default function Dashboard() {
                 </p>
               </div>
             )}
+            {selectedNav === "book" && <BookRide />}
             {selectedNav === "earnings" && (
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 md:p-6">
                 <h2 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">

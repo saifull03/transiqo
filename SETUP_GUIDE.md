@@ -224,6 +224,92 @@ npm install
 npm run build
 ```
 
+## Google Maps Setup (for Destination Selection & Fare Calculation)
+
+### 1. Configure Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the following APIs:
+   - **Maps JavaScript API** - For map display and interaction
+   - **Places API** - For location search and geocoding
+   - **Directions API** - For calculating routes and distances
+   - **Distance Matrix API** - For calculating distances between points
+
+### 2. Get Google Maps API Key
+
+1. In Google Cloud Console, go to **Credentials**
+2. Click **Create Credentials** → **API Key**
+3. Copy your API key
+4. (Recommended) Restrict the API key:
+   - Click on the API key
+   - Under **Application restrictions**, select **HTTP referrers**
+   - Add your domain (e.g., `http://localhost:3000/*`)
+   - Under **API restrictions**, select **Restrict key** and choose the APIs listed above
+
+### 3. Add API Key to Environment
+
+Create or update `.env.local` file in project root:
+
+```env
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_api_key_here
+NEXT_PUBLIC_GOOGLE_MAPS_ID=your_map_id_here  # Optional: for styled maps
+```
+
+### 4. Component Features
+
+**BookRide Component** includes:
+
+- ✅ Google Map with click-to-select destination
+- ✅ Pickup location display
+- ✅ Destination marker and address lookup
+- ✅ Route visualization with directions
+- ✅ Real-time fare calculation based on:
+  - Distance (1.5 $/km)
+  - Estimated time (0.25 $/minute)
+  - Base fare ($2.50)
+  - Minimum fare ($3.50)
+
+**DestinationMap Component**:
+
+- Google Map with marker placement
+- Address reverse geocoding
+- Route visualization
+- Distance and time estimates
+
+**FareCalculator Utility**:
+
+- Uses Haversine formula for accurate distance calculation
+- Estimates travel time based on average speed (30 km/h)
+- Generates detailed fare breakdown
+
+### 5. Usage in Dashboard
+
+- Navigate to "Book Ride" in the sidebar
+- Enter or confirm pickup location
+- Click on map to select destination
+- View calculated fare with distance and time estimates
+- Confirm booking
+
+### 6. Troubleshooting
+
+**Issue**: Map not displaying
+
+- Check API key is valid in `.env.local`
+- Verify required APIs are enabled in Google Cloud Console
+- Check browser console for error messages
+
+**Issue**: Routes not showing
+
+- Ensure Directions API is enabled
+- Check that both pickup and destination are valid locations
+
+**Issue**: High API costs
+
+- Restrict API key to your domain
+- Limit API usage to only required services
+- Consider using [Maps SDK for Billing](https://developers.google.com/maps/billing-and-pricing)
+
 ## Next Steps
 
 1. **Replace Mock Data** - Connect to real backend APIs

@@ -269,20 +269,122 @@ npm install
 
 ---
 
+## 🆕 NEW: Book Ride Feature with Google Maps
+
+### ✨ Features Added (April 5, 2026)
+
+A complete ride booking system has been added with:
+
+#### **1. Google Maps Integration**
+
+- Interactive map for destination selection
+- Click on map to place marker
+- Route visualization with directions
+- Real-time distance and travel time display
+- Address reverse geocoding
+
+#### **2. BookRide Component** (`src/components/BookRide.tsx`)
+
+- Multi-step booking flow
+- Pickup location input
+- Destination selection on map
+- Real-time fare calculation
+- Detailed fare breakdown
+- Trip confirmation
+
+#### **3. DestinationMap Component** (`src/components/DestinationMap.tsx`)
+
+- Google Map interface with click-to-select
+- Pickup location (green marker)
+- Destination location (red marker)
+- Route line visualization
+- Address display and validation
+
+#### **4. Fare Calculator** (`src/utils/fareCalculator.ts`)
+
+- Haversine formula for accurate distance calculation
+- Dynamic fare calculation based on:
+  - Base fare: $2.50
+  - Distance rate: $1.50 per km
+  - Time rate: $0.25 per minute
+  - Minimum fare: $3.50
+- Travel time estimation (average 30 km/h)
+- Formatted fare display
+
+#### **5. Navigation Integration**
+
+- "Book Ride" option added to sidebar
+- MapPin icon for easy identification
+- Integrated into Dashboard routing
+
+### 🔧 Setup Required
+
+1. **Install Google Maps package** (already done):
+
+   ```bash
+   npm install @react-google-maps/api
+   ```
+
+2. **Get Google Maps API Key**:
+   - Visit [Google Cloud Console](https://console.cloud.google.com/)
+   - Create/select project
+   - Enable: Maps JavaScript API, Places API, Directions API
+   - Create API key in Credentials
+   - Add to `.env.local`
+
+3. **Configure environment**:
+   ```env
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key_here
+   ```
+
+### 📚 Documentation
+
+- **Detailed Guide**: See `BOOK_RIDE_GUIDE.md`
+- **Setup Instructions**: See `SETUP_GUIDE.md` → "Google Maps Setup"
+- **Example API Config**: `.env.local.example`
+
+### 🚀 Usage
+
+1. Navigate to "Book Ride" in sidebar
+2. Enter or confirm pickup location
+3. Click on map to select destination
+4. Review calculated fare
+5. Confirm booking
+
+### 💰 Fare Calculation Example
+
+**Route: 5 km, 10 minutes**
+
+- Base fare: $2.50
+- Distance (5 km × $1.50): $7.50
+- Time (10 min × $0.25): $2.50
+- **Total: $12.50**
+
+### 🔐 Security Notes
+
+- API key is **public** (intended for frontend)
+- Restrict to HTTP referrers in Google Cloud Console
+- Limit to specific APIs only
+- Never commit real keys to version control
+
+---
+
 ## 📞 Support
 
 For setup issues:
 
 1. Check SETUP_GUIDE.md
-2. Verify Node.js version (18+)
-3. Try clearing node_modules and reinstalling
+2. Check BOOK_RIDE_GUIDE.md for map features
+3. Verify Google Maps API key configuration
 4. Check that all files are in the correct location
+5. Verify Node.js version (18+)
+6. Try clearing node_modules and reinstalling
 
 ---
 
 ## 🎉 You're All Set!
 
-Your ride-sharing dashboard is ready to use. Start the dev server and begin customizing!
+Your ride-sharing dashboard with booking and mapping is ready to use. Start the dev server and begin customizing!
 
 ```bash
 npm run dev
