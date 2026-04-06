@@ -39,6 +39,13 @@ export default function MapTilerMap({
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    console.log("MapTilerMap initializing", { defaultCenter, apiKey });
+    setIsLoading(true);
+
+    maplibregl.setWorkerUrl(
+      "https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl-csp-worker.js",
+    );
+
     // Initialize map
     map.current = new maplibregl.Map({
       container: mapContainer.current,
@@ -48,6 +55,7 @@ export default function MapTilerMap({
     });
 
     map.current.on("load", () => {
+      console.log("MapTilerMap load event fired");
       setIsLoading(false);
 
       // Add pickup marker if provided
@@ -68,6 +76,7 @@ export default function MapTilerMap({
     });
 
     map.current.on("error", (event) => {
+      console.error("MapTilerMap error event", event);
       setLoadError(
         event.error?.message ||
           "Map failed to load. Check your access token or network.",
