@@ -324,11 +324,34 @@
         margin: 6px auto;
         height: 32px;
       }
+
+      @media (max-width: 767px) {
+        #toast {
+          left: 1rem;
+          right: 1rem;
+          bottom: 1rem;
+          width: auto;
+          text-align: center;
+        }
+
+        #mobile-user-menu {
+          align-items: flex-start;
+          gap: 0.75rem;
+          flex-direction: column;
+        }
+
+        #modal-box {
+          padding: 1.25rem;
+          border-radius: 1.5rem;
+          max-height: calc(100vh - 2rem);
+          overflow-y: auto;
+        }
+      }
     </style>
   </head>
   <body>
     <!-- NAV -->
-    <nav class="fixed top-0 left-0 right-0 z-50 px-6 py-4">
+    <nav class="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-4">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
         <a
           href="#"
@@ -516,7 +539,7 @@
             onclick="toggleMobileMenu()"
             >Pricing</a
           >
-          <div id="mobile-guest-btns" class="flex gap-3 pt-2">
+          <div id="mobile-guest-btns" class="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               onclick="openModal('login')"
               class="btn-ghost text-sm px-5 py-2.5 rounded-xl flex-1"
@@ -569,11 +592,11 @@
 
     <!-- HERO -->
     <section
-      class="min-h-screen pt-28 pb-16 px-6 flex items-center relative overflow-hidden"
+      class="min-h-screen pt-24 md:pt-28 pb-12 md:pb-16 px-4 md:px-6 flex items-center relative overflow-hidden"
     >
       <!-- Background blobs -->
       <div
-        class="absolute top-20 right-0 w-96 h-96 rounded-full pointer-events-none"
+        class="absolute top-16 md:top-20 right-0 w-56 h-56 sm:w-72 sm:h-72 md:w-96 md:h-96 rounded-full pointer-events-none"
         style="
           background: radial-gradient(
             circle,
@@ -583,7 +606,7 @@
         "
       ></div>
       <div
-        class="absolute bottom-0 left-0 w-80 h-80 rounded-full pointer-events-none"
+        class="absolute bottom-0 left-0 w-44 h-44 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full pointer-events-none"
         style="
           background: radial-gradient(
             circle,
@@ -594,12 +617,12 @@
       ></div>
 
       <div
-        class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center"
+        class="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-10 lg:gap-12 items-center"
       >
         <!-- Left: Copy -->
-        <div>
+        <div class="max-w-xl">
           <div
-            class="pill inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 fade-up delay-1"
+            class="pill inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5 md:mb-6 fade-up delay-1"
           >
             <span
               class="w-1.5 h-1.5 rounded-full"
@@ -608,36 +631,36 @@
             Now available in 40+ cities
           </div>
           <h1
-            class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-none mb-6 fade-up delay-2"
+            class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-none mb-5 md:mb-6 fade-up delay-2"
             style="line-height: 1"
           >
             Move on<br />
             <span style="color: var(--accent)">your terms.</span>
           </h1>
           <p
-            class="text-lg mb-10 max-w-md fade-up delay-3"
+            class="text-base md:text-lg mb-8 md:mb-10 max-w-full sm:max-w-md fade-up delay-3"
             style="color: var(--muted); line-height: 1.8"
           >
             Transiqo connects you with trusted drivers in seconds. Fast,
             transparent, and always on time. Your city, your pace.
           </p>
-          <div class="flex flex-wrap gap-4 fade-up delay-4">
+          <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 fade-up delay-4">
             <button
               onclick="scrollToBooking()"
-              class="btn-primary px-8 py-4 rounded-2xl text-base"
+              class="btn-primary w-full sm:w-auto px-8 py-4 rounded-2xl text-base"
             >
               Book a ride now
             </button>
             <button
               onclick="openModal('driver')"
-              class="btn-ghost px-8 py-4 rounded-2xl text-base"
+              class="btn-ghost w-full sm:w-auto px-8 py-4 rounded-2xl text-base"
             >
               Become a driver
             </button>
           </div>
           <!-- Stats row -->
-          <div class="flex gap-8 mt-12 fade-up delay-4">
-            <div>
+          <div class="flex flex-col sm:flex-row sm:flex-wrap gap-5 sm:gap-8 mt-10 md:mt-12 fade-up delay-4">
+            <div class="min-w-0">
               <div class="stat-number text-3xl font-extrabold" id="stat-rides">
                 0
               </div>
@@ -646,9 +669,10 @@
               </div>
             </div>
             <div
+              class="hidden sm:block"
               style="width: 1px; background: rgba(255, 255, 255, 0.07)"
             ></div>
-            <div>
+            <div class="min-w-0">
               <div
                 class="stat-number text-3xl font-extrabold"
                 id="stat-drivers"
@@ -660,9 +684,10 @@
               </div>
             </div>
             <div
+              class="hidden sm:block"
               style="width: 1px; background: rgba(255, 255, 255, 0.07)"
             ></div>
-            <div>
+            <div class="min-w-0">
               <div class="stat-number text-3xl font-extrabold">
                 <span id="stat-rating">0</span>★
               </div>
@@ -674,7 +699,10 @@
         </div>
 
         <!-- Right: Booking widget -->
-        <div id="booking-panel" class="card rounded-3xl p-6 glow-sm relative">
+        <div
+          id="booking-panel"
+          class="card rounded-2xl sm:rounded-3xl p-4 sm:p-6 glow-sm relative"
+        >
           <div class="section-tag mb-4">Book your ride</div>
           <!-- Pickup -->
           <div class="relative mb-3">
@@ -733,7 +761,7 @@
           </div>
 
           <!-- Ride type selector -->
-          <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
             <div
               class="ride-card card rounded-xl p-3 text-center selected"
               data-type="standard"
@@ -779,7 +807,7 @@
           </div>
 
           <!-- Time -->
-          <div class="grid grid-cols-2 gap-3 mb-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
             <div>
               <label class="block text-xs mb-1.5" style="color: var(--muted)"
                 >Date</label
@@ -836,10 +864,10 @@
     </section>
 
     <!-- MAP SECTION -->
-    <section class="py-16 px-6">
+    <section class="py-12 md:py-16 px-4 md:px-6">
       <div class="max-w-7xl mx-auto">
         <div
-          class="map-bg rounded-3xl h-80 relative flex items-center justify-center"
+          class="map-bg rounded-3xl h-64 sm:h-80 relative flex items-center justify-center"
           style="border: 1px solid rgba(255, 255, 255, 0.06)"
         >
           <!-- Fake map pins -->
@@ -917,7 +945,7 @@
     </section>
 
     <!-- HOW IT WORKS -->
-    <section id="how-it-works" class="py-20 px-6">
+    <section id="how-it-works" class="py-16 md:py-20 px-4 md:px-6">
       <div class="max-w-7xl mx-auto">
         <div class="text-center mb-14">
           <div class="section-tag mb-3">Process</div>
@@ -1064,9 +1092,13 @@
     </section>
 
     <!-- FEATURES -->
-    <section id="features" class="py-20 px-6" style="background: var(--dark-2)">
+    <section
+      id="features"
+      class="py-16 md:py-20 px-4 md:px-6"
+      style="background: var(--dark-2)"
+    >
       <div class="max-w-7xl mx-auto">
-        <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <div class="grid lg:grid-cols-2 gap-10 md:gap-16 items-center">
           <div>
             <div class="section-tag mb-4">Why Transiqo</div>
             <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-8">
@@ -1339,7 +1371,7 @@
     </section>
 
     <!-- PRICING -->
-    <section id="pricing" class="py-20 px-6">
+    <section id="pricing" class="py-16 md:py-20 px-4 md:px-6">
       <div class="max-w-7xl mx-auto">
         <div class="text-center mb-14">
           <div class="section-tag mb-3">Pricing</div>
@@ -1489,10 +1521,14 @@
     </section>
 
     <!-- DRIVER CTA -->
-    <section id="drivers" class="py-20 px-6" style="background: var(--dark-2)">
+    <section
+      id="drivers"
+      class="py-16 md:py-20 px-4 md:px-6"
+      style="background: var(--dark-2)"
+    >
       <div class="max-w-7xl mx-auto">
         <div
-          class="rounded-3xl p-10 md:p-14 relative overflow-hidden"
+          class="rounded-3xl p-6 sm:p-8 md:p-14 relative overflow-hidden"
           style="
             background: linear-gradient(
               135deg,
@@ -1527,7 +1563,7 @@
               Flexible hours, weekly payouts, and a community that has your
               back.
             </p>
-            <div class="flex flex-wrap gap-6 mb-8">
+            <div class="flex flex-wrap gap-5 sm:gap-6 mb-8">
               <div>
                 <div
                   class="text-2xl font-extrabold"
@@ -1583,7 +1619,7 @@
     </section>
 
     <!-- TESTIMONIALS -->
-    <section class="py-20 px-6">
+    <section class="py-16 md:py-20 px-4 md:px-6">
       <div class="max-w-7xl mx-auto">
         <div class="text-center mb-14">
           <div class="section-tag mb-3">Reviews</div>
@@ -1701,7 +1737,7 @@
     </section>
 
     <!-- FOOTER -->
-    <footer class="py-12 px-6">
+    <footer class="py-12 px-4 md:px-6">
       <div class="max-w-7xl mx-auto">
         <div class="grid md:grid-cols-4 gap-8 mb-10">
           <div>
@@ -1868,7 +1904,7 @@
       <div
         id="modal-box"
         onclick="event.stopPropagation()"
-        class="card rounded-3xl p-8 w-full max-w-md"
+        class="card rounded-2xl sm:rounded-3xl p-5 sm:p-8 w-full max-w-md"
       >
         <div id="modal-content"></div>
       </div>
@@ -2010,6 +2046,13 @@
           <label class="block text-xs mb-1.5" style="color:var(--muted)">Password</label>
           <input type="password" placeholder="••••••••" class="field w-full rounded-xl px-4 py-3 text-sm">
         </div>
+        <div class="rounded-2xl p-4 mb-6" style="background:rgba(200,240,75,0.07);border:1px solid rgba(200,240,75,0.18)">
+          <div class="text-xs font-bold mb-2" style="font-family:'Syne',sans-serif;color:var(--accent)">Demo account</div>
+          <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">Use this test account to explore the booking flow right away.</p>
+          <div class="text-xs mb-1" style="color:var(--text)">Email: <span style="color:var(--accent)">demo@transiqo.com</span></div>
+          <div class="text-xs mb-3" style="color:var(--text)">Password: <span style="color:var(--accent)">demo123</span></div>
+          <button onclick="fillDemoLogin()" class="btn-ghost w-full py-2.5 rounded-xl text-xs">Use demo credentials</button>
+        </div>
         <button onclick="handleAuth('login')" class="btn-primary w-full py-3.5 rounded-xl text-sm">Sign in</button>
         <p class="text-center text-xs mt-4" style="color:var(--muted)">No account? <button onclick="closeModal();setTimeout(()=>openModal('signup'),200)" class="underline" style="background:none;border:none;cursor:pointer;color:var(--accent)">Sign up</button></p>
       `;
@@ -2019,7 +2062,7 @@
           <h3 class="text-2xl font-extrabold" style="font-family:'Syne',sans-serif">Create account</h3>
           <button onclick="closeModal()" style="color:var(--muted);font-size:22px;line-height:1;background:none;border:none;cursor:pointer">×</button>
         </div>
-        <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div>
             <label class="block text-xs mb-1.5" style="color:var(--muted)">First name</label>
             <input type="text" placeholder="Alex" class="field w-full rounded-xl px-4 py-3 text-sm">
@@ -2079,9 +2122,23 @@
 
       // ---- AUTH STATE ----
       let currentUser = null;
+      const DEMO_USER = {
+        firstName: "Demo",
+        lastName: "Rider",
+        email: "demo@transiqo.com",
+        password: btoa("demo123"),
+      };
+
+      function ensureDemoUser(users) {
+        if (!users.some((u) => u.email === DEMO_USER.email)) {
+          users.unshift({ ...DEMO_USER });
+        }
+        return users;
+      }
 
       function loadAuthState() {
         try {
+          saveUsers(getUsers());
           const stored = localStorage.getItem("transiqo_user");
           if (stored) {
             currentUser = JSON.parse(stored);
@@ -2192,13 +2249,31 @@
       // ---- USERS DB (localStorage) ----
       function getUsers() {
         try {
-          return JSON.parse(localStorage.getItem("transiqo_users") || "[]");
+          const parsed = JSON.parse(localStorage.getItem("transiqo_users") || "[]");
+          return ensureDemoUser(Array.isArray(parsed) ? parsed : []);
         } catch (e) {
-          return [];
+          return ensureDemoUser([]);
         }
       }
       function saveUsers(users) {
         localStorage.setItem("transiqo_users", JSON.stringify(users));
+      }
+
+      function fillDemoLogin() {
+        const emailInput = document.querySelector(
+          "#modal-content input[type='email']",
+        );
+        const pwInput = document.querySelector(
+          "#modal-content input[type='password']",
+        );
+        if (emailInput) {
+          emailInput.value = DEMO_USER.email;
+          clearFieldError(emailInput);
+        }
+        if (pwInput) {
+          pwInput.value = "demo123";
+          clearFieldError(pwInput);
+        }
       }
 
       // ---- HANDLE AUTH ----
