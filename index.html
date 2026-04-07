@@ -364,18 +364,106 @@
           >
         </div>
         <div class="hidden md:flex items-center gap-3">
-          <button
-            onclick="openModal('login')"
-            class="btn-ghost text-sm px-5 py-2.5 rounded-xl"
-          >
-            Sign in
-          </button>
-          <button
-            onclick="openModal('signup')"
-            class="btn-primary text-sm px-5 py-2.5 rounded-xl"
-          >
-            Get started
-          </button>
+          <!-- Guest buttons -->
+          <div id="nav-guest-btns" class="flex items-center gap-3">
+            <button
+              onclick="openModal('login')"
+              class="btn-ghost text-sm px-5 py-2.5 rounded-xl"
+            >
+              Sign in
+            </button>
+            <button
+              onclick="openModal('signup')"
+              class="btn-primary text-sm px-5 py-2.5 rounded-xl"
+            >
+              Get started
+            </button>
+          </div>
+          <!-- Logged-in user menu -->
+          <div id="nav-user-menu" class="hidden relative">
+            <button
+              id="user-avatar-btn"
+              onclick="toggleUserDropdown()"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+              style="
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+              "
+            >
+              <div
+                class="user-avatar w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold"
+                style="
+                  background: var(--accent);
+                  color: var(--dark);
+                  font-family: &quot;Syne&quot;, sans-serif;
+                "
+              >
+                ?
+              </div>
+              <span
+                class="user-name text-sm font-semibold"
+                style="font-family: &quot;Syne&quot;, sans-serif"
+                >User</span
+              >
+              <svg
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            <div
+              id="user-dropdown"
+              class="hidden absolute right-0 top-12 rounded-2xl shadow-xl z-50 min-w-48 py-2"
+              style="
+                background: var(--dark-2);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+              "
+            >
+              <div
+                class="px-4 py-2 border-b mb-1"
+                style="border-color: rgba(255, 255, 255, 0.07)"
+              >
+                <p class="text-xs" style="color: var(--muted)">Signed in</p>
+                <p
+                  class="text-sm font-semibold truncate"
+                  style="font-family: &quot;Syne&quot;, sans-serif"
+                  id="dropdown-email-label"
+                ></p>
+              </div>
+              <button
+                onclick="alert('My Rides – coming soon!')"
+                class="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors"
+              >
+                🚗 My Rides
+              </button>
+              <button
+                onclick="alert('Profile – coming soon!')"
+                class="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors"
+              >
+                👤 Profile
+              </button>
+              <div
+                class="my-1"
+                style="height: 1px; background: rgba(255, 255, 255, 0.07)"
+              ></div>
+              <button
+                onclick="logout()"
+                class="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors"
+                style="color: #ff6b6b"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
         </div>
         <!-- Hamburger -->
         <button
@@ -428,7 +516,7 @@
             onclick="toggleMobileMenu()"
             >Pricing</a
           >
-          <div class="flex gap-3 pt-2">
+          <div id="mobile-guest-btns" class="flex gap-3 pt-2">
             <button
               onclick="openModal('login')"
               class="btn-ghost text-sm px-5 py-2.5 rounded-xl flex-1"
@@ -440,6 +528,39 @@
               class="btn-primary text-sm px-5 py-2.5 rounded-xl flex-1"
             >
               Get started
+            </button>
+          </div>
+          <div
+            id="mobile-user-menu"
+            class="hidden pt-2 flex items-center justify-between"
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold"
+                style="
+                  background: var(--accent);
+                  color: var(--dark);
+                  font-family: &quot;Syne&quot;, sans-serif;
+                "
+                id="mobile-avatar"
+              >
+                ?
+              </div>
+              <span
+                class="mobile-user-name text-sm font-semibold"
+                style="font-family: &quot;Syne&quot;, sans-serif"
+                >User</span
+              >
+            </div>
+            <button
+              onclick="
+                logout();
+                toggleMobileMenu();
+              "
+              class="text-sm px-4 py-2 rounded-xl"
+              style="color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3)"
+            >
+              Sign out
             </button>
           </div>
         </div>
@@ -1956,15 +2077,260 @@
         document.getElementById("modal-backdrop").classList.add("hidden");
       }
 
-      function handleAuth(type) {
-        closeModal();
-        const msgs = {
-          login: "✓ Signed in successfully!",
-          signup: "✓ Account created! Welcome to Transiqo.",
-          driver: "✓ Application submitted! We'll be in touch.",
-        };
-        showToast(msgs[type] || "✓ Done!");
+      // ---- AUTH STATE ----
+      let currentUser = null;
+
+      function loadAuthState() {
+        try {
+          const stored = localStorage.getItem("transiqo_user");
+          if (stored) {
+            currentUser = JSON.parse(stored);
+            updateNavForUser();
+          }
+        } catch (e) {}
       }
+
+      function saveAuthState(user) {
+        currentUser = user;
+        localStorage.setItem("transiqo_user", JSON.stringify(user));
+        updateNavForUser();
+      }
+
+      function clearAuthState() {
+        currentUser = null;
+        localStorage.removeItem("transiqo_user");
+        updateNavForUser();
+      }
+
+      function updateNavForUser() {
+        const guestBtns = document.getElementById("nav-guest-btns");
+        const userMenu = document.getElementById("nav-user-menu");
+        const mobileGuestBtns = document.getElementById("mobile-guest-btns");
+        const mobileUserMenu = document.getElementById("mobile-user-menu");
+
+        if (currentUser) {
+          const initials = (
+            currentUser.firstName[0] +
+            (currentUser.lastName ? currentUser.lastName[0] : "")
+          ).toUpperCase();
+          const greeting =
+            `${currentUser.firstName} ${currentUser.lastName || ""}`.trim();
+
+          if (guestBtns) guestBtns.classList.add("hidden");
+          if (userMenu) {
+            userMenu.classList.remove("hidden");
+            const avatar = userMenu.querySelector(".user-avatar");
+            const name = userMenu.querySelector(".user-name");
+            if (avatar) avatar.textContent = initials;
+            if (name) name.textContent = greeting;
+          }
+          const emailLabel = document.getElementById("dropdown-email-label");
+          if (emailLabel) emailLabel.textContent = currentUser.email;
+          if (mobileGuestBtns) mobileGuestBtns.classList.add("hidden");
+          if (mobileUserMenu) {
+            mobileUserMenu.classList.remove("hidden");
+            const mName = mobileUserMenu.querySelector(".mobile-user-name");
+            const mAvatar = document.getElementById("mobile-avatar");
+            if (mName) mName.textContent = greeting;
+            if (mAvatar) mAvatar.textContent = initials;
+          }
+        } else {
+          if (guestBtns) guestBtns.classList.remove("hidden");
+          if (userMenu) userMenu.classList.add("hidden");
+          if (mobileGuestBtns) mobileGuestBtns.classList.remove("hidden");
+          if (mobileUserMenu) mobileUserMenu.classList.add("hidden");
+        }
+      }
+
+      function toggleUserDropdown() {
+        const dd = document.getElementById("user-dropdown");
+        dd.classList.toggle("hidden");
+        document.addEventListener("click", closeDropdownOutside, {
+          once: true,
+        });
+      }
+
+      function closeDropdownOutside(e) {
+        const dd = document.getElementById("user-dropdown");
+        const trigger = document.getElementById("user-avatar-btn");
+        if (dd && !dd.contains(e.target) && !trigger.contains(e.target)) {
+          dd.classList.add("hidden");
+        }
+      }
+
+      function logout() {
+        clearAuthState();
+        const dd = document.getElementById("user-dropdown");
+        if (dd) dd.classList.add("hidden");
+        showToast("👋 Signed out. See you soon!");
+      }
+
+      // ---- VALIDATION HELPERS ----
+      function validateEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+      function validatePassword(pw) {
+        return pw.length >= 6;
+      }
+      function setFieldError(input, msg) {
+        input.style.borderColor = "#ff6b6b";
+        let err = input.parentElement.querySelector(".field-error");
+        if (!err) {
+          err = document.createElement("p");
+          err.className = "field-error";
+          err.style.cssText = "color:#ff6b6b;font-size:11px;margin-top:4px;";
+          input.parentElement.appendChild(err);
+        }
+        err.textContent = msg;
+      }
+      function clearFieldError(input) {
+        input.style.borderColor = "";
+        const err = input.parentElement.querySelector(".field-error");
+        if (err) err.remove();
+      }
+
+      // ---- USERS DB (localStorage) ----
+      function getUsers() {
+        try {
+          return JSON.parse(localStorage.getItem("transiqo_users") || "[]");
+        } catch (e) {
+          return [];
+        }
+      }
+      function saveUsers(users) {
+        localStorage.setItem("transiqo_users", JSON.stringify(users));
+      }
+
+      // ---- HANDLE AUTH ----
+      function handleAuth(type) {
+        if (type === "login") {
+          const emailInput = document.querySelector(
+            "#modal-content input[type='email']",
+          );
+          const pwInput = document.querySelector(
+            "#modal-content input[type='password']",
+          );
+          let valid = true;
+
+          clearFieldError(emailInput);
+          clearFieldError(pwInput);
+
+          if (!validateEmail(emailInput.value.trim())) {
+            setFieldError(emailInput, "Enter a valid email address.");
+            valid = false;
+          }
+          if (!validatePassword(pwInput.value)) {
+            setFieldError(pwInput, "Password must be at least 6 characters.");
+            valid = false;
+          }
+          if (!valid) return;
+
+          const users = getUsers();
+          const user = users.find(
+            (u) => u.email === emailInput.value.trim().toLowerCase(),
+          );
+          if (!user) {
+            setFieldError(emailInput, "No account found with this email.");
+            return;
+          }
+          if (user.password !== btoa(pwInput.value)) {
+            setFieldError(pwInput, "Incorrect password.");
+            return;
+          }
+
+          closeModal();
+          saveAuthState({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          });
+          showToast(`✓ Welcome back, ${user.firstName}!`);
+        } else if (type === "signup") {
+          const inputs = document.querySelectorAll("#modal-content input");
+          const firstNameInput = inputs[0];
+          const lastNameInput = inputs[1];
+          const emailInput = inputs[2];
+          const pwInput = inputs[3];
+          let valid = true;
+
+          [firstNameInput, lastNameInput, emailInput, pwInput].forEach(
+            clearFieldError,
+          );
+
+          if (!firstNameInput.value.trim()) {
+            setFieldError(firstNameInput, "First name is required.");
+            valid = false;
+          }
+          if (!validateEmail(emailInput.value.trim())) {
+            setFieldError(emailInput, "Enter a valid email address.");
+            valid = false;
+          }
+          if (!validatePassword(pwInput.value)) {
+            setFieldError(pwInput, "Password must be at least 6 characters.");
+            valid = false;
+          }
+          if (!valid) return;
+
+          const users = getUsers();
+          if (
+            users.find((u) => u.email === emailInput.value.trim().toLowerCase())
+          ) {
+            setFieldError(
+              emailInput,
+              "An account with this email already exists.",
+            );
+            return;
+          }
+
+          const newUser = {
+            firstName: firstNameInput.value.trim(),
+            lastName: lastNameInput.value.trim(),
+            email: emailInput.value.trim().toLowerCase(),
+            password: btoa(pwInput.value),
+          };
+          users.push(newUser);
+          saveUsers(users);
+
+          closeModal();
+          saveAuthState({
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+            email: newUser.email,
+          });
+          showToast(`✓ Welcome to Transiqo, ${newUser.firstName}!`);
+        } else if (type === "driver") {
+          const inputs = document.querySelectorAll("#modal-content input");
+          const nameInput = inputs[0];
+          const phoneInput = inputs[1];
+          let valid = true;
+          [nameInput, phoneInput].forEach(clearFieldError);
+          if (!nameInput.value.trim()) {
+            setFieldError(nameInput, "Name is required.");
+            valid = false;
+          }
+          if (!phoneInput.value.trim()) {
+            setFieldError(phoneInput, "Phone is required.");
+            valid = false;
+          }
+          if (!valid) return;
+          closeModal();
+          showToast("✓ Application submitted! We'll be in touch.");
+        }
+      }
+
+      // ---- PROTECT BOOKING ----
+      const _origBookRide = bookRide;
+      bookRide = function () {
+        if (!currentUser) {
+          showToast("⚠ Please sign in to book a ride!", "#ff6b6b");
+          setTimeout(() => openModal("login"), 600);
+          return;
+        }
+        _origBookRide();
+      };
+
+      // Init on load
+      loadAuthState();
 
       // Smooth scroll for anchor links
       document.querySelectorAll('a[href^="#"]').forEach((a) => {
