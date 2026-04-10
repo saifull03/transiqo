@@ -10,6 +10,16 @@ const parseLocation = (location) => ({
 const validateLocation = (location) =>
   Number.isFinite(location.lat) && Number.isFinite(location.lng);
 
+const resolveDistanceKm = (pickup, destination, requestedDistanceKm) => {
+  const parsedDistanceKm = Number(requestedDistanceKm);
+
+  if (Number.isFinite(parsedDistanceKm) && parsedDistanceKm > 0) {
+    return Number(parsedDistanceKm.toFixed(2));
+  }
+
+  return calculateDistanceKm(pickup, destination);
+};
+
 export const getRideEstimate = async (req, res) => {
   try {
     const pickup = parseLocation(req.body.pickup ?? {});
@@ -19,7 +29,7 @@ export const getRideEstimate = async (req, res) => {
       return res.status(400).json({ message: "Valid pickup and destination are required" });
     }
 
-    const distanceKm = calculateDistanceKm(pickup, destination);
+    const distanceKm = resolveDistanceKm(pickup, destination, req.body.distanceKm);
     const rideOptions = buildRideOptions(distanceKm);
 
     return res.json({
@@ -41,7 +51,7 @@ export const createRideBooking = async (req, res) => {
       return res.status(400).json({ message: "Ride details are incomplete" });
     }
 
-    const distanceKm = calculateDistanceKm(pickup, destination);
+    const distanceKm = resolveDistanceKm(pickup, destination, req.body.distanceKm);
     const rideOption = buildRideOptions(distanceKm).find(
       (option) => option.id === selectedRideType
     );

@@ -24,7 +24,13 @@ function MapClickHandler({ onPick }) {
   return null;
 }
 
-export default function MapSelector({ pickup, destination, setPickup, setDestination }) {
+export default function MapSelector({
+  pickup,
+  destination,
+  routePath,
+  setPickup,
+  setDestination
+}) {
   const center = useMemo(() => {
     if (pickup) {
       return [pickup.lat, pickup.lng];
@@ -80,10 +86,14 @@ export default function MapSelector({ pickup, destination, setPickup, setDestina
 
         {pickup && destination && (
           <Polyline
-            positions={[
-              [pickup.lat, pickup.lng],
-              [destination.lat, destination.lng]
-            ]}
+            positions={
+              routePath?.length
+                ? routePath
+                : [
+                    [pickup.lat, pickup.lng],
+                    [destination.lat, destination.lng]
+                  ]
+            }
             pathOptions={{ color: "#ef8354", weight: 5 }}
           />
         )}

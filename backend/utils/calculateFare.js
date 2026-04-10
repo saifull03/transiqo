@@ -23,24 +23,24 @@ const rideTypes = [
     id: "moto",
     name: "Moto",
     description: "Fast solo ride for short city trips",
-    baseFare: 40,
-    perKm: 12,
+    baseFare: 100,
+    perKm: 60,
     etaMinutes: 4
   },
   {
     id: "economy",
     name: "Economy",
     description: "Affordable everyday car ride",
-    baseFare: 70,
-    perKm: 18,
+    baseFare: 100,
+    perKm: 60,
     etaMinutes: 6
   },
   {
     id: "premium",
     name: "Premium",
     description: "Comfort ride with higher-rated drivers",
-    baseFare: 120,
-    perKm: 28,
+    baseFare: 100,
+    perKm: 60,
     etaMinutes: 8
   }
 ];

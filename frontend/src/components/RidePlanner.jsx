@@ -2,13 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
+import { getDrivingRoute } from "../lib/routing";
 import MapSelector from "./MapSelector";
 
 export default function RidePlanner() {
+  const baseFare = 100;
+  const perKmRate = 60;
   const navigate = useNavigate();
   const { auth, isAuthenticated } = useAuth();
   const [pickup, setPickup] = useState(null);
   const [destination, setDestination] = useState(null);
+  const [routeData, setRouteData] = useState(null);
   const [estimate, setEstimate] = useState(null);
   const [activeRideId, setActiveRideId] = useState("");
   const [message, setMessage] = useState("");
@@ -36,6 +40,26 @@ export default function RidePlanner() {
     loadRideHistory();
   }, [auth.token]);
 
+  useEffect(() => {
+    const loadRoute = async () => {
+      if (!pickup || !destination) {
+        setRouteData(null);
+        return;
+      }
+
+      try {
+        setError("");
+        const route = await getDrivingRoute(pickup, destination);
+        setRouteData(route);
+      } catch (requestError) {
+        setRouteData(null);
+        setError(requestError.message);
+      }
+    };
+
+    loadRoute();
+  }, [pickup, destination]);
+
   const getEstimate = async () => {
     if (!pickup || !destination) {
       setError("Please select both pickup and destination on the map.");
@@ -47,11 +71,17 @@ export default function RidePlanner() {
     setMessage("");
 
     try {
+      const activeRoute = routeData ?? (await getDrivingRoute(pickup, destination));
       const data = await apiRequest("/rides/estimate", {
         method: "POST",
-        body: { pickup, destination }
+        body: {
+          pickup,
+          destination,
+          distanceKm: activeRoute.distanceKm
+        }
       });
       setEstimate(data);
+      setRouteData(activeRoute);
       setActiveRideId(data.rideOptions[0]?.id ?? "");
     } catch (requestError) {
       setError(requestError.message);
@@ -82,7 +112,8 @@ export default function RidePlanner() {
         body: {
           pickup,
           destination,
-          rideType: activeRideId
+          rideType: activeRideId,
+          distanceKm: routeData?.distanceKm
         }
       });
       setMessage(`${data.ride.rideType} ride confirmed for ৳${data.ride.fare}.`);
@@ -108,6 +139,7 @@ export default function RidePlanner() {
             onClick={() => {
               setPickup(null);
               setDestination(null);
+              setRouteData(null);
               setEstimate(null);
               setActiveRideId("");
               setError("");
@@ -121,6 +153,7 @@ export default function RidePlanner() {
         <MapSelector
           pickup={pickup}
           destination={destination}
+          routePath={routeData?.coordinates}
           setPickup={setPickup}
           setDestination={setDestination}
         />
@@ -135,6 +168,26 @@ export default function RidePlanner() {
             <strong>{destination?.label || "Tap the map to set destination"}</strong>
           </div>
         </div>
+
+        {routeData && (
+          <div className="route-summary">
+            <div>
+              <span>Road distance</span>
+              <strong>{routeData.distanceKm} km</strong>
+            </div>
+            <div>
+              <span>Estimated drive time</span>
+              <strong>{routeData.durationMinutes} min</strong>
+            </div>
+          </div>
+        )}
+
+        {routeData && (
+          <p className="muted-text">
+            Fare calculation: {baseFare} TK + ({routeData.distanceKm} km x {perKmRate} TK) ={" "}
+            {baseFare + routeData.distanceKm * perKmRate} TK
+          </p>
+        )}
 
         <button type="button" className="primary-button" onClick={getEstimate} disabled={loadingEstimate}>
           {loadingEstimate ? "Calculating fare..." : "Show ride options"}

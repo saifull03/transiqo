@@ -156,6 +156,7 @@ input {
 .hero-actions,
 .panel-head,
 .location-summary,
+.route-summary,
 .ride-meta {
   display: flex;
   align-items: center;
@@ -264,7 +265,8 @@ input {
   margin: 1rem 0;
 }
 
-.location-summary div {
+.location-summary div,
+.route-summary div {
   flex: 1;
   padding: 0.9rem 1rem;
   border-radius: 18px;
@@ -272,9 +274,14 @@ input {
 }
 
 .location-summary span,
+.route-summary span,
 .ride-meta span {
   color: #5c677d;
   font-size: 0.9rem;
+}
+
+.route-summary {
+  margin: 0 0 1rem;
 }
 
 .ride-card,
@@ -386,6 +393,7 @@ input {
   .hero-actions,
   .panel-head,
   .location-summary,
+  .route-summary,
   .ride-card,
   .history-item {
     align-items: stretch;
@@ -393,6 +401,7 @@ input {
 
   .topbar,
   .location-summary,
+  .route-summary,
   .ride-card,
   .history-item {
     flex-direction: column;
