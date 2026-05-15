@@ -17,6 +17,13 @@ const Dashboard = () => {
   
   // Rider specific state
   const [incomingRequest, setIncomingRequest] = useState(null);
+  const [activeRide, setActiveRide] = useState(null);
+
+  // User specific state for post-ride
+  const [paymentWaiting, setPaymentWaiting] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [reviewData, setReviewData] = useState({ rating: 5, comment: '' });
+  const [completedRideId, setCompletedRideId] = useState(null);
 
   // Initialize Socket.io Connection
   useEffect(() => {
@@ -43,6 +50,25 @@ const Dashboard = () => {
       newSocket.on('rideAccepted', (data) => {
         if (user.role === 'user') {
           setBookingStatus('A driver is on the way!');
+        }
+      });
+
+      // Listen for completed ride (User only)
+      newSocket.on('rideCompleted', (data) => {
+        if (user.role === 'user') {
+          setBookingStatus('');
+          setPaymentWaiting(true);
+          setFare(data.fare);
+        }
+      });
+
+      // Listen for payment confirmation (User only)
+      newSocket.on('paymentConfirmed', (data) => {
+        if (user.role === 'user') {
+          setBookingStatus('');
+          setPaymentWaiting(false);
+          setShowReview(true);
+          setCompletedRideId(data.rideId);
         }
       });
 
@@ -136,12 +162,86 @@ const Dashboard = () => {
       }
       
       setIncomingRequest(null);
+      setActiveRide({ ...incomingRequest, status: 'accepted' });
       alert('Ride Accepted! Navigate to the pickup location.');
-      // In Phase 6, we will switch UI to active trip tracking
     } catch (error) {
       console.error("Failed to accept ride", error);
       alert('Failed to accept ride. Another rider may have accepted it.');
       setIncomingRequest(null);
+    }
+  };
+
+  const finishRide = async () => {
+    if (!activeRide) return;
+    try {
+      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/status`, { status: 'completed' }, config);
+      setActiveRide({ ...activeRide, status: 'completed' });
+      
+      if (socket) {
+        socket.emit('rideCompleted', { 
+          rideId: activeRide._id, 
+          userId: activeRide.user,
+          fare: activeRide.fare
+        });
+      }
+      alert('Ride marked as completed. Please collect payment.');
+    } catch (error) {
+      console.error("Failed to finish ride", error);
+      alert('Error finishing ride.');
+    }
+  };
+
+  const confirmPayment = async () => {
+    if (!activeRide) return;
+    try {
+      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/payment`, {}, config);
+      
+      if (socket) {
+        socket.emit('paymentConfirmed', { 
+          rideId: activeRide._id, 
+          userId: activeRide.user 
+        });
+      }
+      alert('Payment confirmed! Ride is fully completed.');
+      setActiveRide(null); // Reset dashboard
+    } catch (error) {
+      console.error("Failed to confirm payment", error);
+      alert('Error confirming payment.');
+    }
+  };
+
+  const submitReview = async (e) => {
+    e.preventDefault();
+    if (!completedRideId) return;
+
+    try {
+      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      await axios.post('http://localhost:5003/api/reviews', {
+        rideId: completedRideId,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        reviewBy: user.role
+      }, config);
+      
+      alert('Review submitted successfully!');
+      setShowReview(false);
+      setCompletedRideId(null);
+      setPickup(null);
+      setDestination(null);
+      setRouteInfo(null);
+      setFare(null);
+      setBookingStatus('');
+    } catch (error) {
+      console.error("Failed to submit review", error);
+      alert('Error submitting review.');
     }
   };
 
@@ -182,6 +282,62 @@ const Dashboard = () => {
                   Accept Ride
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReview && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Rate Your Trip</h2>
+            <form onSubmit={submitReview} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rating (1-5)</label>
+                <input 
+                  type="number" 
+                  min="1" max="5" 
+                  value={reviewData.rating}
+                  onChange={(e) => setReviewData({...reviewData, rating: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
+                <textarea 
+                  value={reviewData.comment}
+                  onChange={(e) => setReviewData({...reviewData, comment: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  rows="3"
+                  placeholder="How was your ride?"
+                ></textarea>
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg"
+              >
+                Submit Review
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* User Payment Waiting UI */}
+      {paymentWaiting && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full p-8 text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Ride Completed!</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Please pay the driver</p>
+            <div className="text-5xl font-black text-green-500 mb-8">${fare}</div>
+            <div className="inline-flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>Waiting for driver to confirm cash...</span>
             </div>
           </div>
         </div>
@@ -252,7 +408,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {user?.role === 'rider' && (
+          {user?.role === 'rider' && !activeRide && (
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">Current Status</p>
@@ -272,12 +428,49 @@ const Dashboard = () => {
               </button>
             </div>
           )}
+
+          {user?.role === 'rider' && activeRide && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">Active Ride</p>
+                <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-600 pb-2 mb-2">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">Fare</span>
+                  <span className="font-bold text-green-500">${activeRide.fare}</span>
+                </div>
+                <div className="text-sm text-gray-800 dark:text-gray-200">
+                  <p><strong>Status:</strong> {activeRide.status}</p>
+                </div>
+              </div>
+              
+              {activeRide.status !== 'completed' ? (
+                <button 
+                  onClick={finishRide}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg"
+                >
+                  Finish Ride
+                </button>
+              ) : (
+                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl border border-green-200 dark:border-green-800 text-center space-y-4">
+                  <h4 className="font-bold text-green-800 dark:text-green-400">Collect Cash</h4>
+                  <div className="text-4xl font-black text-green-600 dark:text-green-400">${activeRide.fare}</div>
+                  <button 
+                    onClick={confirmPayment}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold transition shadow-lg"
+                  >
+                    Confirm Cash Received
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 w-full relative z-0">
           <RideMap 
             onLocationsUpdate={handleLocationsUpdate} 
             onRouteCalculated={handleRouteCalculated}
+            initialPickup={activeRide?.pickupLocation}
+            initialDestination={activeRide?.dropoffLocation}
           />
         </div>
       </div>

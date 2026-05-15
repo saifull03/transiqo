@@ -26,9 +26,11 @@ app.use(express.json());
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const rideRoutes = require('./routes/rideRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/rides', rideRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 
 // Basic route to check if server is running
@@ -58,6 +60,18 @@ io.on('connection', (socket) => {
         const { rideId, userId, riderId } = data;
         // Notify the specific user who requested the ride
         io.to(userId).emit('rideAccepted', { rideId, riderId, message: 'A driver is on the way!' });
+    });
+
+    // Rider completes the ride
+    socket.on('rideCompleted', (data) => {
+        const { rideId, userId, fare } = data;
+        io.to(userId).emit('rideCompleted', { rideId, fare, message: 'Ride completed! Waiting for payment.' });
+    });
+
+    // Rider confirms payment
+    socket.on('paymentConfirmed', (data) => {
+        const { rideId, userId } = data;
+        io.to(userId).emit('paymentConfirmed', { rideId, message: 'Payment successful!' });
     });
 
     // Broadcast rider's live location to the specific trip room

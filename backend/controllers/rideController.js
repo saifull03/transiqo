@@ -77,4 +77,23 @@ const updateRideStatus = async (req, res) => {
   }
 };
 
-module.exports = { requestRide, getRideHistory, updateRideStatus };
+// @desc    Confirm payment received
+// @route   PUT /api/rides/:id/payment
+// @access  Private (Rider only)
+const confirmPayment = async (req, res) => {
+  const ride = await Ride.findById(req.params.id);
+
+  if (!ride) {
+    return res.status(404).json({ message: 'Ride not found' });
+  }
+
+  try {
+    ride.paymentStatus = 'completed';
+    const updatedRide = await ride.save();
+    res.json(updatedRide);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+module.exports = { requestRide, getRideHistory, updateRideStatus, confirmPayment };

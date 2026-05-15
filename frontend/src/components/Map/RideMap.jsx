@@ -34,11 +34,17 @@ const dropoffIcon = new L.Icon({
   iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
 });
 
-const RideMap = ({ onLocationsUpdate, onRouteCalculated }) => {
-  const [pickup, setPickup] = useState(null);
-  const [destination, setDestination] = useState(null);
+const RideMap = ({ onLocationsUpdate, onRouteCalculated, initialPickup, initialDestination }) => {
+  const [pickup, setPickup] = useState(initialPickup || null);
+  const [destination, setDestination] = useState(initialDestination || null);
   const [routeCoords, setRouteCoords] = useState([]);
   const [mapStyle, setMapStyle] = useState('osm');
+
+  // Sync with props
+  useEffect(() => {
+    if (initialPickup) setPickup(initialPickup);
+    if (initialDestination) setDestination(initialDestination);
+  }, [initialPickup, initialDestination]);
 
   const tileLayers = {
     osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",

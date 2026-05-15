@@ -27,6 +27,9 @@ const Navbar = () => {
               <Link to="/dashboard" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 transition">
                 Dashboard
               </Link>
+              <Link to="/history" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 transition">
+                History
+              </Link>
               <button 
                 onClick={handleLogout}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition"
