@@ -479,18 +479,27 @@ const Dashboard = () => {
 
               {riderInfo && bookingStatus && !bookingStatus.includes('Failed') && (
                 <div className="bg-white dark:bg-gray-700 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
-                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2 border-b border-gray-100 dark:border-gray-600 pb-1">Driver Information</h4>
-                  <div className="flex items-center space-x-3 mb-2">
-                    <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden flex items-center justify-center text-gray-500 dark:text-gray-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 border-b border-gray-100 dark:border-gray-600 pb-2">🚗 Driver Information</h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white leading-tight">{riderInfo.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{riderInfo.phone}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">{riderInfo.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{riderInfo.phone}</p>
-                    </div>
+                    <a
+                      href={`tel:${riderInfo.phone}`}
+                      className="flex items-center justify-center w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg shadow-green-500/30 transition-transform hover:scale-110"
+                      title={`Call ${riderInfo.name}`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                    </a>
                   </div>
                   {riderInfo.vehicle && (
-                    <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg mt-2">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
                       <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehicle</p>
                       <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{riderInfo.vehicle.make} {riderInfo.vehicle.model}</p>
                       <p className="text-xs text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-2 py-1 rounded inline-block mt-1 font-mono uppercase bg-white dark:bg-gray-700">{riderInfo.vehicle.licensePlate}</p>
@@ -543,15 +552,24 @@ const Dashboard = () => {
                 
                 {activeRide.userInfo && (
                   <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Passenger</h4>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">👤 Passenger</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800 dark:text-white leading-tight">{activeRide.userInfo.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{activeRide.userInfo.phone}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 dark:text-white leading-tight">{activeRide.userInfo.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{activeRide.userInfo.phone}</p>
-                      </div>
+                        <a
+                          href={`tel:${activeRide.userInfo.phone}`}
+                          className="flex items-center justify-center w-9 h-9 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg shadow-green-500/30 transition-transform hover:scale-110"
+                          title={`Call ${activeRide.userInfo.name}`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                        </a>
                     </div>
                   </div>
                 )}
