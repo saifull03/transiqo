@@ -26,7 +26,9 @@ const registerUser = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
+      profilePicture: user.profilePicture,
       token: generateToken(user._id, user.role),
     });
   } else {
@@ -59,7 +61,10 @@ const registerRider = async (req, res) => {
       _id: rider._id,
       name: rider.name,
       email: rider.email,
+      phone: rider.phone,
+      vehicle: rider.vehicle,
       role: 'rider',
+      profilePicture: rider.profilePicture,
       token: generateToken(rider._id, 'rider'),
     });
   } else {
@@ -81,7 +86,13 @@ const login = async (req, res) => {
         _id: rider._id,
         name: rider.name,
         email: rider.email,
+        phone: rider.phone,
+        vehicle: rider.vehicle,
         role: 'rider',
+        profilePicture: rider.profilePicture,
+        isOnline: rider.isOnline,
+        rating: rider.rating,
+        earnings: rider.earnings,
         token: generateToken(rider._id, 'rider'),
       });
     } else {
@@ -95,7 +106,9 @@ const login = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
+        profilePicture: user.profilePicture,
         token: generateToken(user._id, user.role),
       });
     } else {
@@ -138,4 +151,76 @@ const updateRiderStatus = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, registerRider, login, getProfile, updateRiderStatus };
+// @desc    Update profile picture (base64)
+// @route   PUT /api/auth/profile/picture
+// @access  Private
+const updateProfilePicture = async (req, res) => {
+  const { profilePicture } = req.body;
+
+  if (!profilePicture) {
+    return res.status(400).json({ message: 'No image data provided' });
+  }
+
+  // Validate it's a base64 image (basic check)
+  if (!profilePicture.startsWith('data:image/')) {
+    return res.status(400).json({ message: 'Invalid image format. Must be base64 data URI.' });
+  }
+
+  try {
+    const Model = req.user.role === 'rider' ? Rider : User;
+    const updated = await Model.findByIdAndUpdate(
+      req.user._id,
+      { profilePicture },
+      { new: true }
+    ).select('-password');
+
+    if (!updated) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ profilePicture: updated.profilePicture, message: 'Profile picture updated successfully' });
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @desc    Update profile info (name, phone)
+// @route   PUT /api/auth/profile/update
+// @access  Private
+const updateProfile = async (req, res) => {
+  const { name, phone } = req.body;
+
+  try {
+    const Model = req.user.role === 'rider' ? Rider : User;
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (phone) updateData.phone = phone;
+
+    const updated = await Model.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true }
+    ).select('-password');
+
+    if (!updated) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      _id: updated._id,
+      name: updated.name,
+      email: updated.email,
+      phone: updated.phone,
+      role: updated.role,
+      profilePicture: updated.profilePicture,
+      ...(updated.role === 'rider' && { vehicle: updated.vehicle, rating: updated.rating, earnings: updated.earnings }),
+      message: 'Profile updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+module.exports = { registerUser, registerRider, login, getProfile, updateRiderStatus, updateProfilePicture, updateProfile };

@@ -25,8 +25,15 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('rideX_user');
   };
 
+  // Update user data in context and localStorage (for profile updates)
+  const updateUser = (updatedData) => {
+    const newUser = { ...user, ...updatedData };
+    setUser(newUser);
+    localStorage.setItem('rideX_user', JSON.stringify(newUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,53 +1,202 @@
-import { useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useContext, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+    setMenuOpen(false);
   };
 
+  const isActive = (path) => location.pathname === path;
+
+  const defaultAvatar = 'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg';
+
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400 tracking-tighter">
-          Ride<span className="text-gray-900 dark:text-white">X</span>
-        </Link>
-        
-        <div className="flex space-x-4 items-center">
-          {user ? (
-            <>
-              <span className="text-gray-600 dark:text-gray-300 font-medium mr-4">
-                Hello, {user.name} ({user.role})
-              </span>
-              <Link to="/dashboard" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 transition">
-                Dashboard
-              </Link>
-              <Link to="/history" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 transition">
-                History
-              </Link>
-              <button 
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="text-gray-800 dark:text-gray-200 hover:text-blue-600 font-medium transition">
-                Login
-              </Link>
-              <Link to="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-md shadow-blue-500/30">
-                Register
-              </Link>
-            </>
-          )}
+    <nav className="bg-gray-900/95 backdrop-blur-xl shadow-2xl sticky top-0 z-50 border-b border-white/5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.08 3.11H5.77L6.85 7zM19 17H5v-5h14v5z"/>
+                <circle cx="7.5" cy="14.5" r="1.5"/>
+                <circle cx="16.5" cy="14.5" r="1.5"/>
+              </svg>
+            </div>
+            <span className="text-xl font-black text-white tracking-tight">
+              Ride<span className="text-blue-400">X</span>
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-2">
+            {user ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isActive('/dashboard')
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a1 1 0 011-1h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21V3M16 21V3" />
+                  </svg>
+                  Dashboard
+                </Link>
+                <Link
+                  to="/history"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isActive('/history')
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  History
+                </Link>
+
+                {/* Profile dropdown */}
+                <div className="relative ml-2">
+                  <button
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/10"
+                  >
+                    <img
+                      src={user.profilePicture || defaultAvatar}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-blue-500/50"
+                      onError={(e) => { e.target.src = defaultAvatar; }}
+                    />
+                    <div className="text-left">
+                      <p className="text-white text-sm font-semibold leading-none">{user.name?.split(' ')[0]}</p>
+                      <p className="text-gray-400 text-xs capitalize mt-0.5">{user.role}</p>
+                    </div>
+                    <svg className={`w-4 h-4 text-gray-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {menuOpen && (
+                    <div className="absolute right-0 mt-2 w-52 bg-gray-800 rounded-2xl shadow-2xl border border-white/10 overflow-hidden z-50 animate-fade-in">
+                      <div className="p-3 border-b border-white/10">
+                        <p className="text-white font-semibold text-sm truncate">{user.name}</p>
+                        <p className="text-gray-400 text-xs truncate">{user.email}</p>
+                      </div>
+                      <div className="p-2">
+                        <Link
+                          to="/dashboard"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          My Profile
+                        </Link>
+                        <Link
+                          to="/history"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Ride History
+                        </Link>
+                        <div className="border-t border-white/10 mt-2 pt-2">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            Sign Out
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-gray-300 hover:text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/10 transition-all"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/10 transition"
+          >
+            {menuOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
+
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-white/10 py-3 space-y-1 animate-fade-in">
+            {user ? (
+              <>
+                <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-white/5 rounded-xl">
+                  <img src={user.profilePicture || defaultAvatar} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-blue-500" onError={(e) => { e.target.src = defaultAvatar; }} />
+                  <div>
+                    <p className="text-white font-semibold">{user.name}</p>
+                    <p className="text-gray-400 text-sm capitalize">{user.role}</p>
+                  </div>
+                </div>
+                <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition">
+                  Dashboard
+                </Link>
+                <Link to="/history" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition">
+                  History
+                </Link>
+                <button onClick={handleLogout} className="w-full text-left px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition font-medium">
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="block px-4 py-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition">Sign In</Link>
+                <Link to="/register" onClick={() => setMenuOpen(false)} className="block px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold text-center">Get Started</Link>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -26,7 +26,7 @@ const ProtectedRoute = ({ children }) => {
 
 function AppRoutes() {
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col font-sans bg-gray-950">
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />

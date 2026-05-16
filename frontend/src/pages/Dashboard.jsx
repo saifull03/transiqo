@@ -1,398 +1,239 @@
-import { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import RideMap from '../components/Map/RideMap';
-import axios from 'axios';
-import { io } from 'socket.io-client';
+import { useState, useContext, useEffect } from "react";
+import { AuthContext } from "../context/AuthContext";
+import axios from "axios";
+import { io } from "socket.io-client";
+import ProfileModal from "../components/dashboard/ProfileModal";
+import UserPanel from "../components/dashboard/UserPanel";
+import RiderPanel from "../components/dashboard/RiderPanel";
+import RideRequestModal from "../components/dashboard/RideRequestModal";
+
+const DEFAULT_AVATAR =
+  "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg";
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+
+  // Shared state
+  const [socket, setSocket] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState("ride"); // 'ride' | 'stats'
+
+  // User-specific ride state
   const [pickup, setPickup] = useState(null);
   const [destination, setDestination] = useState(null);
   const [routeInfo, setRouteInfo] = useState(null);
   const [fare, setFare] = useState(null);
-  const [bookingStatus, setBookingStatus] = useState('');
+  const [bookingStatus, setBookingStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [riderInfo, setRiderInfo] = useState(null);
+  const [paymentWaiting, setPaymentWaiting] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [reviewData, setReviewData] = useState({ rating: 5, comment: "" });
+  const [completedRideId, setCompletedRideId] = useState(null);
+
+  // Rider-specific state
   const [isOnline, setIsOnline] = useState(false);
-  const [socket, setSocket] = useState(null);
-  
-  // Rider specific state
   const [incomingRequest, setIncomingRequest] = useState(null);
   const [activeRide, setActiveRide] = useState(null);
 
-  // User specific state for post-ride
-  const [paymentWaiting, setPaymentWaiting] = useState(false);
-  const [showReview, setShowReview] = useState(false);
-  const [reviewData, setReviewData] = useState({ rating: 5, comment: '' });
-  const [completedRideId, setCompletedRideId] = useState(null);
-  
-  // Timer specific state
+  // Timer
   const [rideStartTime, setRideStartTime] = useState(null);
-  const [elapsedTime, setElapsedTime] = useState('00:00');
-  
-  // Participant Info State
-  const [riderInfo, setRiderInfo] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState("00:00");
 
-  // Initialize Socket.io Connection
+  // Stats
+  const [stats, setStats] = useState({ totalRides: 0, totalSpent: 0, avgRating: 0 });
+
+  const token = () => {
+    const s = localStorage.getItem("rideX_user");
+    return s ? JSON.parse(s).token : "";
+  };
+  const authHeaders = () => ({ headers: { Authorization: `Bearer ${token()}` } });
+
+  // Socket setup
   useEffect(() => {
-    if (user) {
-      const newSocket = io('http://localhost:5003');
-      setSocket(newSocket);
-      
-      newSocket.on('connect', () => {
-        newSocket.emit('join', user._id);
-        // If rider is already online when loading dashboard, join riders room
-        if (user.role === 'rider' && isOnline) {
-          newSocket.emit('join', 'riders');
-        }
-      });
-
-      // Listen for incoming ride requests (Rider only)
-      newSocket.on('newRideRequest', (rideDetails) => {
-        if (user.role === 'rider' && isOnline) {
-          setIncomingRequest(rideDetails);
-        }
-      });
-
-      // Listen for a ride being taken by another rider
-      newSocket.on('removeRideRequest', (data) => {
-        setIncomingRequest(prev => {
-          if (prev && prev._id === data.rideId) return null;
-          return prev;
-        });
-      });
-
-      // Listen for accepted ride (User only)
-      newSocket.on('rideAccepted', (data) => {
-        if (user.role === 'user') {
-          setBookingStatus('A driver is on the way!');
-          setRiderInfo(data.riderInfo);
-        }
-      });
-
-      // Listen for started ride (User only)
-      newSocket.on('rideStarted', (data) => {
-        if (user.role === 'user') {
-          setBookingStatus('Ride is in progress...');
-          setRideStartTime(data.startedAt);
-        }
-      });
-
-      // Listen for completed ride (User only)
-      newSocket.on('rideCompleted', (data) => {
-        if (user.role === 'user') {
-          setBookingStatus('');
-          setPaymentWaiting(true);
-          setFare(data.fare);
-          setRideStartTime(null); // stop the timer
-        }
-      });
-
-      // Listen for payment confirmation (User only)
-      newSocket.on('paymentConfirmed', (data) => {
-        if (user.role === 'user') {
-          setBookingStatus('');
-          setPaymentWaiting(false);
-          setShowReview(true);
-          setCompletedRideId(data.rideId);
-        }
-      });
-
-      return () => newSocket.disconnect();
-    }
+    if (!user) return;
+    const s = io("http://localhost:5003");
+    setSocket(s);
+    s.on("connect", () => {
+      s.emit("join", user._id);
+      if (user.role === "rider" && isOnline) s.emit("join", "riders");
+    });
+    s.on("newRideRequest", (d) => { if (user.role === "rider" && isOnline) setIncomingRequest(d); });
+    s.on("removeRideRequest", (d) => setIncomingRequest((p) => p?._id === d.rideId ? null : p));
+    s.on("rideAccepted", (d) => { if (user.role === "user") { setBookingStatus("A driver is on the way!"); setRiderInfo(d.riderInfo); } });
+    s.on("rideStarted", (d) => { if (user.role === "user") { setBookingStatus("Ride is in progress..."); setRideStartTime(d.startedAt); } });
+    s.on("rideCompleted", (d) => { if (user.role === "user") { setBookingStatus(""); setPaymentWaiting(true); setFare(d.fare); setRideStartTime(null); } });
+    s.on("paymentConfirmed", (d) => { if (user.role === "user") { setPaymentWaiting(false); setShowReview(true); setCompletedRideId(d.rideId); } });
+    return () => s.disconnect();
   }, [user, isOnline]);
 
+  // Timer effect
   useEffect(() => {
-    let interval;
-    if (rideStartTime) {
-      interval = setInterval(() => {
-        const start = new Date(rideStartTime).getTime();
-        const now = Date.now();
-        const diff = Math.floor((now - start) / 1000);
-        
-        const minutes = Math.floor(diff / 60).toString().padStart(2, '0');
-        const seconds = (diff % 60).toString().padStart(2, '0');
-        setElapsedTime(`${minutes}:${seconds}`);
-      }, 1000);
-    } else {
-      setElapsedTime('00:00');
-    }
-    return () => clearInterval(interval);
+    if (!rideStartTime) { setElapsedTime("00:00"); return; }
+    const id = setInterval(() => {
+      const diff = Math.floor((Date.now() - new Date(rideStartTime).getTime()) / 1000);
+      setElapsedTime(`${String(Math.floor(diff / 60)).padStart(2, "0")}:${String(diff % 60).padStart(2, "0")}`);
+    }, 1000);
+    return () => clearInterval(id);
   }, [rideStartTime]);
 
-  const handleLocationsUpdate = (data) => {
-    if (data.type === 'pickup') setPickup({ ...data.coords, address: data.address });
-    if (data.type === 'destination') setDestination({ ...data.coords, address: data.address });
+  // Load stats
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await axios.get("http://localhost:5003/api/rides/history", authHeaders());
+        const rides = data || [];
+        const totalRides = rides.length;
+        const totalSpent = rides.reduce((a, r) => a + (r.fare || 0), 0);
+        setStats({ totalRides, totalSpent: totalSpent.toFixed(0), avgRating: user?.rating || 5.0 });
+      } catch { /* no history yet */ }
+    };
+    if (user) load();
+  }, [user]);
+
+  const handleLocationsUpdate = (d) => {
+    if (d.type === "pickup") setPickup({ ...d.coords, address: d.address });
+    if (d.type === "destination") setDestination({ ...d.coords, address: d.address });
   };
 
   const handleRouteCalculated = (info) => {
     setRouteInfo(info);
-    if (info) {
-      const calculatedFare = 2.00 + (info.distance * 0.80) + (info.duration * 0.20);
-      setFare(calculatedFare.toFixed(2));
-    } else {
-      setFare(null);
-    }
+    setFare(info ? (2.0 + info.distance * 0.8 + info.duration * 0.2).toFixed(2) : null);
   };
 
   const requestRide = async () => {
     if (!pickup || !destination || !fare) return;
-    
-    setLoading(true);
-    setBookingStatus('');
+    setLoading(true); setBookingStatus("");
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
       const payload = {
-        pickupLocation: { lat: pickup.lat, lng: pickup.lng, address: pickup.address || 'Map Selection' },
-        dropoffLocation: { lat: destination.lat, lng: destination.lng, address: destination.address || 'Map Selection' },
-        distance: routeInfo.distance,
-        duration: routeInfo.duration,
-        fare: parseFloat(fare)
+        pickupLocation: { lat: pickup.lat, lng: pickup.lng, address: pickup.address || "Map Selection" },
+        dropoffLocation: { lat: destination.lat, lng: destination.lng, address: destination.address || "Map Selection" },
+        distance: routeInfo.distance, duration: routeInfo.duration, fare: parseFloat(fare),
       };
-
-      const { data } = await axios.post('http://localhost:5003/api/rides/request', payload, config);
-      
-      const rideDataWithUser = {
-        ...data,
-        userInfo: { name: user.name, phone: user.phone || 'N/A' }
-      };
-
-      setBookingStatus('Ride requested successfully! Waiting for a driver...');
-      
-      if (socket) {
-        socket.emit('rideRequest', rideDataWithUser);
-      }
-    } catch (error) {
-      setBookingStatus('Failed to request ride. Make sure the backend is running!');
-    } finally {
-      setLoading(false);
-    }
+      const { data } = await axios.post("http://localhost:5003/api/rides/request", payload, authHeaders());
+      setBookingStatus("Ride requested! Waiting for a driver...");
+      socket?.emit("rideRequest", { ...data, userInfo: { name: user.name, phone: user.phone || "N/A" } });
+    } catch { setBookingStatus("Failed to request ride."); }
+    finally { setLoading(false); }
   };
 
   const toggleRiderStatus = async () => {
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
       const newStatus = !isOnline;
-      await axios.put('http://localhost:5003/api/auth/rider/status', { isOnline: newStatus }, config);
+      await axios.put("http://localhost:5003/api/auth/rider/status", { isOnline: newStatus }, authHeaders());
       setIsOnline(newStatus);
-      
-      if (socket) {
-        if (newStatus) {
-          socket.emit('join', 'riders');
-        } else {
-          setIncomingRequest(null); // Clear any pending requests when going offline
-        }
-      }
-    } catch (error) {
-      console.error("Failed to update status", error);
-      alert('Error updating status: ' + (error.response?.data?.message || error.message));
-    }
+      if (socket && newStatus) socket.emit("join", "riders");
+      if (!newStatus) setIncomingRequest(null);
+    } catch (e) { alert("Error: " + (e.response?.data?.message || e.message)); }
   };
 
   const acceptRide = async () => {
     if (!incomingRequest) return;
-    
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      await axios.put(`http://localhost:5003/api/rides/${incomingRequest._id}/status`, { status: 'accepted' }, config);
-      
-      if (socket) {
-        socket.emit('rideAccepted', { 
-          rideId: incomingRequest._id, 
-          userId: incomingRequest.user, 
-          riderId: user._id,
-          riderInfo: { name: user.name, phone: user.phone || 'N/A', vehicle: user.vehicle || { make: 'Toyota', model: 'Corolla', licensePlate: 'DHK-123' } }
-        });
-      }
-      
+      await axios.put(`http://localhost:5003/api/rides/${incomingRequest._id}/status`, { status: "accepted" }, authHeaders());
+      socket?.emit("rideAccepted", {
+        rideId: incomingRequest._id, userId: incomingRequest.user, riderId: user._id,
+        riderInfo: { name: user.name, phone: user.phone || "N/A", vehicle: user.vehicle || { make: "Toyota", model: "Corolla", licensePlate: "DHK-123" } },
+      });
+      setActiveRide({ ...incomingRequest, status: "accepted" });
       setIncomingRequest(null);
-      setActiveRide({ ...incomingRequest, status: 'accepted' });
-      alert('Ride Accepted! Navigate to the pickup location.');
-    } catch (error) {
-      console.error("Failed to accept ride", error);
-      alert('Failed to accept ride. Another rider may have accepted it.');
-      setIncomingRequest(null);
-    }
+    } catch { alert("Failed to accept. Another rider may have taken it."); setIncomingRequest(null); }
   };
 
   const startRide = async () => {
     if (!activeRide) return;
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      const { data } = await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/status`, { status: 'started' }, config);
-      setActiveRide({ ...activeRide, status: 'started', startedAt: data.startedAt });
-      setRideStartTime(data.startedAt); // start rider timer
-
-      if (socket) {
-        socket.emit('rideStarted', { 
-          rideId: activeRide._id, 
-          userId: activeRide.user,
-          startedAt: data.startedAt
-        });
-      }
-      alert('Ride started!');
-    } catch (error) {
-      console.error("Failed to start ride", error);
-      alert('Error starting ride.');
-    }
+      const { data } = await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/status`, { status: "started" }, authHeaders());
+      setActiveRide({ ...activeRide, status: "started", startedAt: data.startedAt });
+      setRideStartTime(data.startedAt);
+      socket?.emit("rideStarted", { rideId: activeRide._id, userId: activeRide.user, startedAt: data.startedAt });
+    } catch { alert("Error starting ride."); }
   };
 
   const finishRide = async () => {
     if (!activeRide) return;
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/status`, { status: 'completed' }, config);
-      setActiveRide({ ...activeRide, status: 'completed' });
-      setRideStartTime(null); // stop the rider timer
-      
-      if (socket) {
-        socket.emit('rideCompleted', { 
-          rideId: activeRide._id, 
-          userId: activeRide.user,
-          fare: activeRide.fare
-        });
-      }
-      alert('Ride marked as completed. Please collect payment.');
-    } catch (error) {
-      console.error("Failed to finish ride", error);
-      alert('Error finishing ride.');
-    }
+      await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/status`, { status: "completed" }, authHeaders());
+      setActiveRide({ ...activeRide, status: "completed" });
+      setRideStartTime(null);
+      socket?.emit("rideCompleted", { rideId: activeRide._id, userId: activeRide.user, fare: activeRide.fare });
+    } catch { alert("Error finishing ride."); }
   };
 
   const confirmPayment = async () => {
     if (!activeRide) return;
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/payment`, {}, config);
-      
-      if (socket) {
-        socket.emit('paymentConfirmed', { 
-          rideId: activeRide._id, 
-          userId: activeRide.user 
-        });
-      }
-      alert('Payment confirmed! Ride is fully completed.');
-      setActiveRide(null); // Reset dashboard
-    } catch (error) {
-      console.error("Failed to confirm payment", error);
-      alert('Error confirming payment.');
-    }
+      await axios.put(`http://localhost:5003/api/rides/${activeRide._id}/payment`, {}, authHeaders());
+      socket?.emit("paymentConfirmed", { rideId: activeRide._id, userId: activeRide.user });
+      setActiveRide(null);
+    } catch { alert("Error confirming payment."); }
   };
 
   const submitReview = async (e) => {
     e.preventDefault();
     if (!completedRideId) return;
-
     try {
-      const token = localStorage.getItem('rideX_user') ? JSON.parse(localStorage.getItem('rideX_user')).token : '';
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
-      await axios.post('http://localhost:5003/api/reviews', {
-        rideId: completedRideId,
-        rating: reviewData.rating,
-        comment: reviewData.comment,
-        reviewBy: user.role
-      }, config);
-      
-      alert('Review submitted successfully!');
-      setShowReview(false);
-      setCompletedRideId(null);
-      setPickup(null);
-      setDestination(null);
-      setRouteInfo(null);
-      setFare(null);
-      setBookingStatus('');
-      setRiderInfo(null);
-    } catch (error) {
-      console.error("Failed to submit review", error);
-      alert('Error submitting review.');
-    }
+      await axios.post("http://localhost:5003/api/reviews", { rideId: completedRideId, rating: reviewData.rating, comment: reviewData.comment, reviewBy: user.role }, authHeaders());
+      setShowReview(false); setCompletedRideId(null);
+      setPickup(null); setDestination(null); setRouteInfo(null); setFare(null); setBookingStatus(""); setRiderInfo(null);
+    } catch { alert("Error submitting review."); }
   };
 
+  const isRider = user?.role === "rider";
+  const profilePic = user?.profilePicture || DEFAULT_AVATAR;
+
   return (
-    <div className="flex-1 bg-gray-100 dark:bg-gray-900 flex flex-col items-center py-6 px-4 sm:px-6 lg:px-8">
-      {/* Incoming Ride Request Popup */}
-      {incomingRequest && user?.role === 'rider' && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full animate-slide-up border border-gray-200 dark:border-gray-700">
-            <div className="bg-blue-600 p-4 text-center">
-              <h2 className="text-xl font-bold text-white uppercase tracking-wider">New Ride Request</h2>
+    <div className="min-h-screen bg-gray-950 text-white">
+      {/* Modals */}
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+
+      <RideRequestModal
+        request={incomingRequest}
+        onAccept={acceptRide}
+        onDecline={() => setIncomingRequest(null)}
+      />
+
+      {/* Payment waiting */}
+      {paymentWaiting && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-3xl p-8 text-center max-w-sm w-full">
+            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">💰</span>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                <span className="text-gray-500 dark:text-gray-400">Est. Earnings</span>
-                <span className="text-2xl font-black text-green-500">৳{incomingRequest.fare}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                <span className="text-gray-500 dark:text-gray-400">Distance</span>
-                <span className="font-bold text-gray-800 dark:text-white">{incomingRequest.distance} km</span>
-              </div>
-              <div className="flex justify-between items-center pb-2">
-                <span className="text-gray-500 dark:text-gray-400">Time to complete</span>
-                <span className="font-bold text-gray-800 dark:text-white">{incomingRequest.duration} min</span>
-              </div>
-              
-              <div className="pt-4 flex space-x-3">
-                <button 
-                  onClick={() => setIncomingRequest(null)}
-                  className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white py-3 rounded-xl font-bold transition hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  Decline
-                </button>
-                <button 
-                  onClick={acceptRide}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-blue-500/30"
-                >
-                  Accept Ride
-                </button>
-              </div>
+            <h2 className="text-2xl font-black text-white mb-2">Ride Complete!</h2>
+            <p className="text-gray-400 mb-4">Please pay your driver</p>
+            <div className="text-5xl font-black text-green-400 mb-6">৳{fare}</div>
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm animate-pulse">
+              <div className="w-2 h-2 bg-gray-500 rounded-full" />
+              Waiting for driver to confirm...
             </div>
           </div>
         </div>
       )}
 
-      {/* Review Modal */}
+      {/* Review modal */}
       {showReview && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Rate Your Trip</h2>
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full">
+            <h2 className="text-xl font-black text-white mb-4">⭐ Rate Your Trip</h2>
             <form onSubmit={submitReview} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rating (1-5)</label>
-                <input 
-                  type="number" 
-                  min="1" max="5" 
-                  value={reviewData.rating}
-                  onChange={(e) => setReviewData({...reviewData, rating: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  required
-                />
+                <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1">Rating (1–5)</label>
+                <div className="flex gap-2">
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} type="button" onClick={() => setReviewData({...reviewData, rating: n})}
+                      className={`flex-1 py-2 rounded-xl font-bold transition ${reviewData.rating >= n ? "bg-yellow-500 text-gray-900" : "bg-white/10 text-gray-400 hover:bg-white/20"}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
-                <textarea 
-                  value={reviewData.comment}
-                  onChange={(e) => setReviewData({...reviewData, comment: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  rows="3"
-                  placeholder="How was your ride?"
-                ></textarea>
+                <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1">Comment</label>
+                <textarea value={reviewData.comment} onChange={e => setReviewData({...reviewData, comment: e.target.value})}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none" rows={3} placeholder="How was your ride?" />
               </div>
-              <button 
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg"
-              >
+              <button type="submit" className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-lg shadow-blue-500/30 hover:from-blue-500 hover:to-indigo-500 transition">
                 Submit Review
               </button>
             </form>
@@ -400,235 +241,123 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* User Payment Waiting UI */}
-      {paymentWaiting && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full p-8 text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      {/* Dashboard Layout */}
+      <div className="flex h-[calc(100vh-64px)]">
+        {/* Sidebar */}
+        <aside className="w-64 bg-gray-900 border-r border-white/5 flex flex-col p-4 gap-2 hidden md:flex">
+          {/* Profile card */}
+          <button onClick={() => setShowProfile(true)} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition group w-full text-left mb-4">
+            <div className="relative">
+              <img src={profilePic} alt="Profile" className="w-12 h-12 rounded-xl object-cover border-2 border-blue-500/50 group-hover:border-blue-400 transition" onError={e => { e.target.src = DEFAULT_AVATAR; }} />
+              {isRider && (
+                <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-900 ${isOnline ? "bg-green-400" : "bg-gray-600"}`} />
+              )}
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Ride Completed!</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Please pay the driver</p>
-            <div className="text-5xl font-black text-green-500 mb-8">৳{fare}</div>
-            <div className="inline-flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 animate-pulse">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span>Waiting for driver to confirm cash...</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm truncate">{user?.name}</p>
+              <p className="text-gray-400 text-xs capitalize">{isRider ? "Rider" : "Passenger"}</p>
             </div>
+            <svg className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Nav items */}
+          {[
+            { id: "ride", label: isRider ? "Ride Control" : "Book a Ride", icon: (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            )},
+            { id: "stats", label: "Statistics", icon: (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            )},
+          ].map(item => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm w-full text-left ${activeTab === item.id ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+
+          {/* Rider earnings quick view */}
+          {isRider && (
+            <div className="mt-auto bg-gradient-to-br from-green-600/20 to-emerald-700/20 border border-green-500/20 rounded-2xl p-4">
+              <p className="text-xs text-green-400 uppercase tracking-wider font-semibold mb-1">Total Earnings</p>
+              <p className="text-2xl font-black text-white">৳{user?.earnings || 0}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-yellow-400 text-sm">★</span>
+                <span className="text-gray-300 text-sm font-semibold">{user?.rating || "5.0"}</span>
+                <span className="text-gray-500 text-xs">rating</span>
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-gray-900/50 flex-shrink-0">
+            <div>
+              <h1 className="text-xl font-black text-white">
+                {activeTab === "ride" ? (isRider ? "Rider Dashboard" : "Book a Ride") : "Statistics"}
+              </h1>
+              <p className="text-gray-400 text-sm mt-0.5">
+                {isRider
+                  ? isOnline ? "🟢 Online — waiting for requests" : "⚫ Offline — tap Go Online to start"
+                  : "Select pickup and dropoff on the map"}
+              </p>
+            </div>
+            {/* Mobile profile button */}
+            <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 md:hidden">
+              <img src={profilePic} alt="Profile" className="w-9 h-9 rounded-xl object-cover border-2 border-blue-500/50" onError={e => { e.target.src = DEFAULT_AVATAR; }} />
+            </button>
           </div>
-        </div>
-      )}
 
-      <div className="w-full max-w-7xl mb-6 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {user?.name}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {user?.role === 'rider' ? (isOnline ? 'You are online and waiting for ride requests.' : 'You are currently offline. Go online to accept rides.') : 'Where to? Select pickup and dropoff on the map.'}
-          </p>
-        </div>
-      </div>
-
-      <div className="w-full max-w-7xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 h-[650px] flex flex-col relative">
-        <div className="absolute top-4 left-4 z-[400] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl p-5 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 w-80 sm:w-96 transition-all duration-300">
-          <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-4">
-            {user?.role === 'rider' ? 'Rider Controls' : 'Ride Details'}
-          </h3>
-          
-          {user?.role === 'user' && (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-300">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>{pickup ? `Pickup: ${pickup.address || `${pickup.lat.toFixed(4)}, ${pickup.lng.toFixed(4)}`}` : 'Select Pickup on Map'}</span>
-              </div>
-              <div className="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-300">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span>{destination ? `Dropoff: ${destination.address || `${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}`}` : 'Select Dropoff on Map'}</span>
-              </div>
-
-              {/* User Timer Display */}
-              {rideStartTime && (
-                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl border border-blue-200 dark:border-blue-800 text-center shadow-inner mt-4 mb-4">
-                  <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-1">Ride Timer</p>
-                  <div className="text-4xl font-black text-blue-700 dark:text-blue-300 font-mono tracking-widest">{elapsedTime}</div>
-                </div>
-              )}
-
-              {routeInfo && fare && (
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-500 dark:text-gray-400 text-sm">Distance</span>
-                    <span className="font-semibold dark:text-white">{routeInfo.distance} km</span>
+          {/* Tab content */}
+          <div className="flex-1 overflow-auto p-6">
+            {activeTab === "ride" && !isRider && (
+              <UserPanel
+                pickup={pickup} destination={destination} routeInfo={routeInfo}
+                fare={fare} bookingStatus={bookingStatus} loading={loading}
+                rideStartTime={rideStartTime} elapsedTime={elapsedTime} riderInfo={riderInfo}
+                onLocationsUpdate={handleLocationsUpdate}
+                onRouteCalculated={handleRouteCalculated}
+                onRequestRide={requestRide}
+              />
+            )}
+            {activeTab === "ride" && isRider && (
+              <RiderPanel
+                isOnline={isOnline} activeRide={activeRide}
+                elapsedTime={elapsedTime} rideStartTime={rideStartTime}
+                onToggleStatus={toggleRiderStatus}
+                onStartRide={startRide}
+                onFinishRide={finishRide}
+                onConfirmPayment={confirmPayment}
+              />
+            )}
+            {activeTab === "stats" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { label: "Total Rides", value: stats.totalRides, icon: "🚗", color: "blue" },
+                  { label: isRider ? "Total Earnings" : "Total Spent", value: `৳${stats.totalSpent}`, icon: "💰", color: "green" },
+                  { label: "Rating", value: `${user?.rating || "5.0"} ★`, icon: "⭐", color: "amber" },
+                ].map(s => (
+                  <div key={s.label} className="bg-gray-900 border border-white/10 rounded-2xl p-6 hover:border-blue-500/30 transition">
+                    <div className="text-3xl mb-3">{s.icon}</div>
+                    <p className="text-gray-400 text-sm uppercase tracking-wider">{s.label}</p>
+                    <p className="text-3xl font-black text-white mt-1">{s.value}</p>
                   </div>
-                  <div className="flex justify-between mb-3 border-b border-gray-200 dark:border-gray-600 pb-3">
-                    <span className="text-gray-500 dark:text-gray-400 text-sm">Est. Time</span>
-                    <span className="font-semibold dark:text-white">{routeInfo.duration} min</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-800 dark:text-gray-200 font-bold">Total Fare</span>
-                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400">৳{fare}</span>
-                  </div>
-                </div>
-              )}
-
-              {bookingStatus && (
-                <div className={`p-3 rounded-lg text-sm font-medium ${bookingStatus.includes('Failed') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
-                  {bookingStatus}
-                </div>
-              )}
-
-              {riderInfo && bookingStatus && !bookingStatus.includes('Failed') && (
-                <div className="bg-white dark:bg-gray-700 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
-                  <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 border-b border-gray-100 dark:border-gray-600 pb-2">🚗 Driver Information</h4>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white leading-tight">{riderInfo.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{riderInfo.phone}</p>
-                      </div>
-                    </div>
-                    <a
-                      href={`tel:${riderInfo.phone}`}
-                      className="flex items-center justify-center w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg shadow-green-500/30 transition-transform hover:scale-110"
-                      title={`Call ${riderInfo.name}`}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                    </a>
-                  </div>
-                  {riderInfo.vehicle && (
-                    <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehicle</p>
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{riderInfo.vehicle.make} {riderInfo.vehicle.model}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 px-2 py-1 rounded inline-block mt-1 font-mono uppercase bg-white dark:bg-gray-700">{riderInfo.vehicle.licensePlate}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {(!bookingStatus || bookingStatus.includes('Failed')) && (
-                <button 
-                  onClick={requestRide}
-                  disabled={!routeInfo || loading}
-                  className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all ${
-                    !routeInfo || loading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5'
-                  }`}
-                >
-                  {loading ? 'Processing...' : routeInfo ? 'Confirm Ride' : 'Select Route First'}
-                </button>
-              )}
-            </div>
-          )}
-
-          {user?.role === 'rider' && !activeRide && (
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">Current Status</p>
-                <div className={`text-center font-bold text-xl ${isOnline ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {isOnline ? 'ONLINE' : 'OFFLINE'}
-                </div>
-              </div>
-              <button 
-                onClick={toggleRiderStatus}
-                className={`w-full text-white py-3 rounded-xl font-bold transition shadow-lg ${
-                  isOnline 
-                    ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' 
-                    : 'bg-green-500 hover:bg-green-600 shadow-green-500/30'
-                }`}
-              >
-                {isOnline ? 'Go Offline' : 'Go Online to Receive Rides'}
-              </button>
-            </div>
-          )}
-
-          {user?.role === 'rider' && activeRide && (
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">Active Ride</p>
-                
-                {activeRide.userInfo && (
-                  <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">👤 Passenger</h4>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800 dark:text-white leading-tight">{activeRide.userInfo.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{activeRide.userInfo.phone}</p>
-                        </div>
-                      </div>
-                        <a
-                          href={`tel:${activeRide.userInfo.phone}`}
-                          className="flex items-center justify-center w-9 h-9 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg shadow-green-500/30 transition-transform hover:scale-110"
-                          title={`Call ${activeRide.userInfo.name}`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                        </a>
-                    </div>
+                ))}
+                {isRider && (
+                  <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 sm:col-span-2 lg:col-span-1 hover:border-blue-500/30 transition">
+                    <div className="text-3xl mb-3">🟢</div>
+                    <p className="text-gray-400 text-sm uppercase tracking-wider">Current Status</p>
+                    <p className={`text-2xl font-black mt-1 ${isOnline ? "text-green-400" : "text-gray-500"}`}>{isOnline ? "Online" : "Offline"}</p>
                   </div>
                 )}
-                
-                {/* Rider Timer Display */}
-                {activeRide.status === 'started' && (
-                  <div className="bg-blue-100 dark:bg-blue-900/50 rounded-lg p-3 text-center mb-4 border border-blue-200 dark:border-blue-800">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-widest mb-1">Elapsed Time</p>
-                    <div className="text-3xl font-black text-blue-700 dark:text-blue-300 font-mono tracking-widest">{elapsedTime}</div>
-                  </div>
-                )}
-                
-                <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-600 pb-2 mb-2">
-                  <span className="text-gray-600 dark:text-gray-400 text-sm">Fare</span>
-                  <span className="font-bold text-green-500">৳{activeRide.fare}</span>
-                </div>
-                <div className="text-sm text-gray-800 dark:text-gray-200">
-                  <p><strong>Status:</strong> {activeRide.status}</p>
-                </div>
               </div>
-              
-              {activeRide.status === 'accepted' ? (
-                <button 
-                  onClick={startRide}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition shadow-lg"
-                >
-                  Start Ride
-                </button>
-              ) : activeRide.status === 'started' ? (
-                <button 
-                  onClick={finishRide}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg"
-                >
-                  Finish Ride
-                </button>
-              ) : (
-                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-xl border border-green-200 dark:border-green-800 text-center space-y-4">
-                  <h4 className="font-bold text-green-800 dark:text-green-400">Collect Cash</h4>
-                  <div className="text-4xl font-black text-green-600 dark:text-green-400">৳{activeRide.fare}</div>
-                  <button 
-                    onClick={confirmPayment}
-                    className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold transition shadow-lg"
-                  >
-                    Confirm Cash Received
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 w-full relative z-0">
-          <RideMap 
-            onLocationsUpdate={handleLocationsUpdate} 
-            onRouteCalculated={handleRouteCalculated}
-            initialPickup={activeRide?.pickupLocation}
-            initialDestination={activeRide?.dropoffLocation}
-          />
-        </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );
