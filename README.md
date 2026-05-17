@@ -71,8 +71,8 @@ rideBuzz/
 Create a `.env` file in the `backend/` directory:
 ```env
 PORT=5003
-MONGO_URI=mongodb://localhost:27017/rideBuzz
-JWT_SECRET=your_super_secret_jwt_key_here
+MONGO_URI=mongodb://127.0.0.1:27017/ridex
+JWT_SECRET=supersecret_jwt_key_ridex
 ```
 
 ### 3. Start the Backend Server
