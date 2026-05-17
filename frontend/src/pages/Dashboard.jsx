@@ -179,7 +179,7 @@ const Dashboard = () => {
   const handleRouteCalculated = (info) => {
     setRouteInfo(info);
     setFare(
-      info ? (200 + info.distance * 60 + info.duration * 20).toFixed(0) : null,
+      info ? (200 + info.distance * 21 + info.duration * 3).toFixed(0) : null,
     );
   };
 

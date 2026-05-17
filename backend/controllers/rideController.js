@@ -13,6 +13,12 @@ const requestRide = async (req, res) => {
   }
 
   try {
+    const baseFare = 200;
+    const distanceCharge = distance * 21;
+    const timeCharge = (duration || 0) * 3;
+    const calculatedTotal = baseFare + distanceCharge + timeCharge;
+    const surgeCharge = fare > calculatedTotal ? fare - calculatedTotal : 0;
+
     const ride = await Ride.create({
       user: req.user._id,
       pickupLocation,
@@ -20,6 +26,12 @@ const requestRide = async (req, res) => {
       distance,
       duration,
       fare,
+      fareBreakdown: {
+        baseFare,
+        distanceCharge,
+        timeCharge,
+        surgeCharge,
+      },
       status: "requested",
     });
 
@@ -124,8 +136,8 @@ const confirmPayment = async (req, res) => {
 const getReceipt = async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.id)
-      .populate("user", "name email phone")
-      .populate("rider", "name vehicle rating phone");
+      .populate("user", "name email phone profilePicture")
+      .populate("rider", "name email phone vehicle profilePicture rating");
 
     if (!ride) return res.status(404).json({ message: "Ride not found" });
 
@@ -146,11 +158,28 @@ const getReceipt = async (req, res) => {
     }
 
     // Build receipt payload
+    let fareBreakdown = ride.fareBreakdown;
+    if (!fareBreakdown || !fareBreakdown.baseFare) {
+      const baseFare = 200;
+      const distanceCharge = (ride.distance || 0) * 21;
+      const timeCharge = (ride.duration || 0) * 3;
+      const calculatedTotal = baseFare + distanceCharge + timeCharge;
+      const surgeCharge = ride.fare > calculatedTotal ? ride.fare - calculatedTotal : 0;
+      fareBreakdown = {
+        baseFare,
+        distanceCharge,
+        timeCharge,
+        surgeCharge,
+      };
+    }
+
     const receipt = {
       rideId: ride._id,
       transactionId: ride.transactionId || null,
       receiptGeneratedAt: ride.receiptGeneratedAt || null,
       createdAt: ride.createdAt,
+      startedAt: ride.startedAt || null,
+      updatedAt: ride.updatedAt || null,
       pickup: ride.pickupLocation,
       dropoff: ride.dropoffLocation,
       distance: ride.distance,
@@ -160,12 +189,7 @@ const getReceipt = async (req, res) => {
       paymentMethod: ride.paymentMethod || "cash",
       paymentStatus: ride.paymentStatus || "pending",
       fare: ride.fare,
-      fareBreakdown: ride.fareBreakdown || {
-        baseFare: 0,
-        distanceCharge: 0,
-        timeCharge: 0,
-        surgeCharge: 0,
-      },
+      fareBreakdown,
       status: ride.status,
     };
 

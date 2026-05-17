@@ -7,7 +7,7 @@ const History = () => {
   const { user } = useContext(AuthContext);
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [receiptRideId, setReceiptRideId] = useState(null);
+  const [receiptConfig, setReceiptConfig] = useState(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -105,20 +105,35 @@ const History = () => {
                       {ride.status === "completed" && (
                         <>
                           <button
-                            onClick={() => setReceiptRideId(ride._id)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded"
+                            onClick={() =>
+                              setReceiptConfig({
+                                rideId: ride._id,
+                                autoAction: null,
+                              })
+                            }
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                           >
                             View Receipt
                           </button>
                           <button
-                            onClick={() => setReceiptRideId(ride._id)}
-                            className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded"
+                            onClick={() =>
+                              setReceiptConfig({
+                                rideId: ride._id,
+                                autoAction: "download",
+                              })
+                            }
+                            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded text-sm font-medium transition-colors"
                           >
                             Download Receipt
                           </button>
                           <button
-                            onClick={() => window.print()}
-                            className="px-3 py-1 bg-green-600 text-white rounded"
+                            onClick={() =>
+                              setReceiptConfig({
+                                rideId: ride._id,
+                                autoAction: "print",
+                              })
+                            }
+                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
                           >
                             Print Receipt
                           </button>
@@ -132,10 +147,11 @@ const History = () => {
           </div>
         )}
       </div>
-      {receiptRideId && (
+      {receiptConfig && (
         <ReceiptModal
-          rideId={receiptRideId}
-          onClose={() => setReceiptRideId(null)}
+          rideId={receiptConfig.rideId}
+          autoAction={receiptConfig.autoAction}
+          onClose={() => setReceiptConfig(null)}
         />
       )}
     </div>
