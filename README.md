@@ -1,37 +1,39 @@
 # 🚗 RideBuzz (RideX) - Full-Stack MERN Ride-Sharing Platform
 
-**RideBuzz** is a modern, production-ready ride-sharing web application built on the MERN stack (MongoDB, Express.js, React, Node.js) featuring real-time Socket.IO bi-directional communication, interactive Leaflet maps with OSRM routing, dynamic fare calculations, professional PDF receipt generation, and dedicated role-based dashboards for passengers and drivers.
+**RideBuzz** is a full-stack ride-sharing application built with MongoDB, Express, React, and Node.js. It combines real-time Socket.IO messaging, Leaflet map routing, dynamic fare calculation, cash payment flow, and separate passenger/driver dashboards.
 
 ---
 
 ## ✨ Key Features
 
-### 👤 Passenger Workflow
-- **Interactive Route Selection**: Click anywhere on the OpenStreetMap/Leaflet map to set Pickup and Dropoff locations.
-- **Automatic OSRM Routing**: Instantly calculates driving polyline, distance (km), and estimated travel time (min).
-- **Dynamic Fare Calculation**: Transparent pricing model based on base fare, per-kilometer rate, and per-minute duration.
-- **Real-Time Driver Tracking**: View driver details (name, phone, star rating, vehicle make/model, license plate) the moment a ride is accepted.
-- **Live Trip Timer**: Displays active trip elapsed time during the journey.
-- **Cash Payment & Rating System**: Complete cash payments and submit comprehensive 1-to-5 star reviews with comments.
+### 👤 Passenger Experience
 
-### 🚕 Driver (Rider) Workflow
-- **Persistent Online Status**: Toggle availability status ("Go Online" / "Go Offline") with automatic MongoDB persistence and local storage session synchronization across page refreshes.
-- **Instant Ride Requests**: Receive real-time broadcasted ride opportunities with passenger details and pickup/dropoff addresses.
-- **Full Trip Lifecycle Management**: Seamlessly transition rides through `accepted` ➔ `started` ➔ `completed` ➔ `cash collected`.
-- **Earnings & Rating Dashboard**: Track total completed rides, accumulated cash earnings, and passenger review history.
+- Interactive pickup/dropoff selection on a Leaflet-powered map.
+- Automatic OSRM routing with distance and time estimates.
+- Live driver assignment and trip status updates.
+- Cash payment confirmation and ride review submission.
 
-### ⚡ Core Infrastructure
-- **Real-Time Socket.IO Engine**: Instantaneous event-driven updates for ride requests, acceptance, trip initiation, completion, and payment confirmation.
-- **Professional Receipt Export**: Dedicated receipt viewing modal with automated dynamic `document.title` synchronization (`Transiqo-invoice-[id]`) for professional PDF printing and downloading.
-- **Robust State Synchronization**: Advanced React lifecycle management ensuring flawless map resets and clean dashboard transitions between active and completed rides.
+### 🚕 Driver Experience
+
+- Online/offline availability toggle.
+- Real-time ride requests delivered instantly.
+- Full trip lifecycle control: accept, start, complete, and confirm payment.
+- Driver earnings and completed ride tracking.
+
+### ⚡ Platform Highlights
+
+- Real-time communication via Socket.IO.
+- JWT-based authentication and MongoDB persistence.
+- Responsive React frontend with Vite and Tailwind CSS.
+- Receipt-friendly trip summaries for printing or download.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: React 18, Vite, Tailwind CSS, React-Leaflet, Leaflet, Axios, Socket.IO-Client.
-- **Backend**: Node.js, Express.js, MongoDB, Mongoose, Socket.IO, JSON Web Tokens (JWT), Bcrypt.
-- **APIs & Geocoding**: OpenStreetMap (Nominatim Reverse Geocoding), OSRM (Open Source Routing Machine API).
+- Frontend: React, Vite, Tailwind CSS, React-Leaflet, Leaflet, Axios, Socket.IO Client.
+- Backend: Node.js, Express, MongoDB, Mongoose, Socket.IO, JWT, Bcrypt.
+- APIs: OpenStreetMap / Nominatim geocoding, OSRM routing.
 
 ---
 
@@ -40,98 +42,119 @@
 ```text
 rideBuzz/
 ├── backend/
-│   ├── controllers/      # Business logic (authController, rideController, reviewController)
-│   ├── middleware/       # JWT authentication & role authorization guards (protect, rider)
-│   ├── models/           # Mongoose schemas (User, Rider, Ride, Review)
-│   ├── routes/           # Express API endpoints (authRoutes, rideRoutes, reviewRoutes)
-│   ├── utils/            # Helper utilities (generateToken)
+│   ├── config/           # Database connection and environment config
+│   ├── controllers/      # Auth, ride, and review business logic
+│   ├── middleware/       # JWT auth and rider authorization
+│   ├── models/           # Mongoose schemas for User, Rider, Ride, Review
+│   ├── routes/           # Express API routes
+│   ├── utils/            # Helper utilities
 │   ├── package.json      # Backend dependencies
-│   └── server.js         # Express server & Socket.IO real-time engine setup
+│   └── server.js         # Express + Socket.IO server entrypoint
 │
 └── frontend/
     ├── src/
-    │   ├── components/   # Modular UI components (UserPanel, RiderPanel, RideMap, ReceiptModal)
-    │   ├── context/      # Global state management (AuthContext with localStorage sync)
-    │   ├── pages/        # Application views (Dashboard, Login, Register, Landing)
-    │   ├── App.jsx       # Root component & React Router configuration
+    │   ├── components/   # Reusable UI and dashboard components
+    │   ├── context/      # Global auth and session state
+    │   ├── pages/        # App views: Home, Dashboard, Login, Register, History
+    │   ├── App.jsx       # Root component and router setup
     │   └── main.jsx      # React DOM entry point
     ├── package.json      # Frontend dependencies
-    └── vite.config.js    # Vite bundler configuration
+    └── vite.config.js    # Vite configuration
 ```
 
 ---
 
-## 🚀 Installation & Getting Started
+## 🚀 Getting Started
 
-### 1. Prerequisites
-- [Node.js](https://nodejs.org/) (v18+ recommended)
-- [MongoDB](https://www.mongodb.com/) (Local instance or Atlas connection string)
+### Prerequisites
 
-### 2. Environment Configuration
-Create a `.env` file in the `backend/` directory:
+- Node.js v18 or newer
+- MongoDB (local or Atlas)
+
+### Backend Setup
+
+1. Create a `.env` file inside `backend/`.
+2. Add the required values:
+
 ```env
-PORT=5003
+PORT=5000
 MONGO_URI=mongodb://127.0.0.1:27017/ridex
 JWT_SECRET=supersecret_jwt_key_ridex
 ```
 
-### 3. Start the Backend Server
+3. Install dependencies and start the server:
+
 ```bash
 cd backend
 npm install
 node server.js
 ```
-*The backend server will start on `http://localhost:5003`.*
 
-### 4. Start the Frontend Development Server
-Open a new terminal window:
+By default, the backend will run on `http://localhost:5000` unless `PORT` is changed in `.env`.
+
+### Frontend Setup
+
+Open a second terminal and run:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*The application will be accessible at `http://localhost:5173`.*
+
+The frontend is served by Vite, typically at `http://localhost:5173`.
 
 ---
 
-## 📡 REST API Endpoints
+## 📡 API Overview
 
-### 🔐 Authentication & Profiles (`/api/auth`)
-- `POST /register/user` - Register a new passenger
-- `POST /register/rider` - Register a new driver with vehicle details
-- `POST /login` - Authenticate user/driver and return JWT token
-- `GET /profile` - Get authenticated user profile
-- `PUT /rider/status` - Update driver online/offline availability
-- `PUT /profile/picture` - Update profile picture (Base64 data URI)
-- `PUT /profile/update` - Update account details (name, phone)
+### Authentication
 
-### 🚗 Rides (`/api/rides`)
-- `POST /request` - Create a new ride request
-- `GET /history` - Get ride history for the authenticated user/driver
-- `GET /:id/receipt` - Fetch detailed fare breakdown and receipt metadata
-- `PUT /:id/status` - Update active ride status (`accepted`, `started`, `completed`)
-- `PUT /:id/payment` - Confirm cash payment collection
+- `POST /api/auth/register/user` — Register a passenger.
+- `POST /api/auth/register/rider` — Register a driver.
+- `POST /api/auth/login` — Login and receive a JWT.
+- `GET /api/auth/profile` — Get authenticated user profile.
+- `PUT /api/auth/rider/status` — Update driver availability.
+- `PUT /api/auth/profile/picture` — Update profile image.
+- `PUT /api/auth/profile/update` — Update account details.
 
-### ⭐ Reviews (`/api/reviews`)
-- `POST /` - Submit a trip rating and comment
-- `GET /my` - Fetch review history for the authenticated driver/user
+### Rides
+
+- `POST /api/rides/request` — Request a new ride.
+- `GET /api/rides/history` — Retrieve ride history.
+- `GET /api/rides/:id/receipt` — Fetch trip receipt data.
+- `PUT /api/rides/:id/status` — Update ride status.
+- `PUT /api/rides/:id/payment` — Confirm cash payment.
+
+### Reviews
+
+- `POST /api/reviews` — Submit a ride review.
+- `GET /api/reviews/my` — Get review history.
 
 ---
 
-## 🔌 Socket.IO Event Reference
+## 🔌 Socket.IO Events
 
-| Event Name | Direction | Description |
-| :--- | :--- | :--- |
-| `join` | Client ➔ Server | Subscribes client to personal user room or general `"riders"` broadcast room. |
-| `rideRequest` | Client ➔ Server | Passenger broadcasts new ride details and coordinates to all online drivers. |
-| `newRideRequest` | Server ➔ Client | Server broadcasts incoming ride opportunity to available drivers. |
-| `rideAccepted` | Bi-directional | Driver accepts ride; server routes driver/vehicle profile directly to passenger. |
-| `removeRideRequest` | Server ➔ Client | Instructs all other online drivers to remove a newly claimed ride request. |
-| `rideStarted` | Bi-directional | Driver initiates trip; passenger dashboard starts live elapsed timer. |
-| `rideCompleted`| Bi-directional | Driver completes trip; passenger dashboard displays cash collection prompt. |
-| `paymentConfirmed`| Bi-directional | Driver confirms cash receipt; passenger dashboard transitions to review modal. |
+| Event               | Direction       | Purpose                                                    |
+| ------------------- | --------------- | ---------------------------------------------------------- |
+| `join`              | Client ➔ Server | Subscribe to a user/rider room or the general riders room. |
+| `rideRequest`       | Client ➔ Server | Send a new ride request to online drivers.                 |
+| `newRideRequest`    | Server ➔ Client | Broadcast a ride opportunity to available drivers.         |
+| `rideAccepted`      | Client/Server   | Notify passenger that a driver accepted the ride.          |
+| `removeRideRequest` | Server ➔ Client | Remove the ride from other drivers' queues.                |
+| `rideStarted`       | Client/Server   | Notify passenger that the ride has started.                |
+| `rideCompleted`     | Client/Server   | Notify passenger that the ride is complete.                |
+| `paymentConfirmed`  | Client/Server   | Confirm cash payment and finish the ride.                  |
+
+---
+
+## 📝 Notes
+
+- Backend depends on `.env` values for `PORT`, `MONGO_URI`, and `JWT_SECRET`.
+- Frontend uses Vite and communicates with the backend over Axios + Socket.IO.
 
 ---
 
 ## 🛡️ License
+
 This project is licensed under the ISC License.
