@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const Rider = require("./models/Rider");
 
 // Load env vars
+import dotenv from "dotenv";
 dotenv.config();
 
 // Connect to database
@@ -92,7 +93,9 @@ io.on("connection", (socket) => {
           phone: rider.phone || "N/A",
           rating: rider.rating ?? 5.0,
           vehicle: rider.vehicle,
-          profilePicture: rider.profilePicture || 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%233b82f6%22%2F%3E%3Cpath%20d%3D%22M50%2055c-11%200-30%206-30%2018v7h60v-7c0-12-19-18-30-18zm0-10c8.28%200%2015-6.72%2015-15S58.28%2015%2050%2015%2035%2021.72%2035%2030s6.72%2015%2015%2015z%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E',
+          profilePicture:
+            rider.profilePicture ||
+            "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%233b82f6%22%2F%3E%3Cpath%20d%3D%22M50%2055c-11%200-30%206-30%2018v7h60v-7c0-12-19-18-30-18zm0-10c8.28%200%2015-6.72%2015-15S58.28%2015%2050%2015%2035%2021.72%2035%2030s6.72%2015%2015%2015z%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E",
         };
       }
     } catch (err) {
@@ -144,13 +147,16 @@ io.on("connection", (socket) => {
   socket.on("rideCancelled", (data) => {
     const { rideId, userId, riderId } = data;
     console.log(`Ride ${rideId} cancelled by passenger ${userId}`);
-    
+
     // Notify all riders to remove the request from their pool
     io.to("riders").emit("removeRideRequest", { rideId });
-    
+
     // If a rider had accepted, notify that specific rider
     if (riderId) {
-      io.to(riderId).emit("rideCancelled", { rideId, message: "The passenger cancelled the ride request." });
+      io.to(riderId).emit("rideCancelled", {
+        rideId,
+        message: "The passenger cancelled the ride request.",
+      });
     }
   });
 
