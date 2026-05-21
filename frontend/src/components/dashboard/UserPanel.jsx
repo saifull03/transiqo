@@ -13,6 +13,8 @@ const UserPanel = ({
   rideStartTime,
   elapsedTime,
   riderInfo,
+  requestCountdown,
+  requestExpired,
   onLocationsUpdate,
   onRouteCalculated,
   onRequestRide,
@@ -108,7 +110,54 @@ const UserPanel = ({
           </div>
         )}
 
-        {/* Cancel button */}
+        {/* 30-second countdown ring while waiting for a driver */}
+        {requestCountdown !== null && !rideStartTime && (
+          <div className="bg-gray-800/60 border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-3">
+            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Looking for a driver</p>
+            {/* SVG countdown ring */}
+            <div className="relative w-20 h-20">
+              <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#1f2937" strokeWidth="6" />
+                <circle
+                  cx="40" cy="40" r="34" fill="none"
+                  stroke={requestCountdown > 10 ? "#3b82f6" : requestCountdown > 5 ? "#f59e0b" : "#ef4444"}
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 34}`}
+                  strokeDashoffset={`${2 * Math.PI * 34 * (1 - requestCountdown / 30)}`}
+                  style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-2xl font-black ${
+                  requestCountdown > 10 ? 'text-blue-400' : requestCountdown > 5 ? 'text-amber-400' : 'text-red-400'
+                }`}>{requestCountdown}</span>
+              </div>
+            </div>
+            <p className="text-gray-400 text-xs text-center">Auto-cancels if no driver accepts</p>
+          </div>
+        )}
+
+        {/* Request expired — show retry button */}
+        {requestExpired && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 text-center space-y-3">
+            <div className="text-3xl">⏱️</div>
+            <p className="text-amber-400 font-bold text-sm">No drivers available right now</p>
+            <p className="text-gray-500 text-xs">Your request timed out after 30 seconds.</p>
+            <button
+              onClick={onRequestRide}
+              disabled={!routeInfo || loading}
+              className="w-full py-3.5 rounded-2xl font-black text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-lg shadow-amber-500/20 hover:-translate-y-0.5 active:translate-y-0 transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Cancel button (only while waiting, not expired) */}
         {bookingStatus && !bookingStatus.includes("Failed") && !rideStartTime && (
           <button
             onClick={onCancelRide}

@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../context/AuthContext";
 import axios from "axios";
 import { io } from "socket.io-client";
@@ -32,10 +32,13 @@ const Dashboard = () => {
   const [reviewData, setReviewData] = useState({ rating: 5, comment: "" });
   const [completedRideId, setCompletedRideId] = useState(null);
   const [activeRideId, setActiveRideId] = useState(null);
+  const [requestCountdown, setRequestCountdown] = useState(null); // 30..0 countdown
+  const [requestExpired, setRequestExpired] = useState(false);    // show retry button
+  const countdownRef = useRef(null);
 
   // Rider-specific state
   const [isOnline, setIsOnline] = useState(user?.isOnline || false);
-  const [incomingRequest, setIncomingRequest] = useState(null);
+  const [incomingRequests, setIncomingRequests] = useState([]); // Array of pending requests
   const [activeRide, setActiveRide] = useState(null);
 
   useEffect(() => {
@@ -74,24 +77,30 @@ const Dashboard = () => {
       if (user.role === "rider" && isOnline) s.emit("join", "riders");
     });
     s.on("newRideRequest", (d) => {
-      if (user.role === "rider" && isOnline) setIncomingRequest(d);
+      if (user.role === "rider" && isOnline)
+        setIncomingRequests((prev) => {
+          // Avoid duplicate entries
+          const exists = prev.some((r) => (r._id || r.id) === (d._id || d.id));
+          return exists ? prev : [...prev, d];
+        });
     });
     s.on("removeRideRequest", (d) =>
-      setIncomingRequest((p) => {
-        if (!p) return null;
-        const currentId = p._id || p.id;
-        return currentId === d.rideId ? null : p;
-      }),
+      setIncomingRequests((prev) => prev.filter((r) => (r._id || r.id) !== d.rideId))
     );
     s.on("rideCancelled", (d) => {
       if (user.role === "rider") {
         setActiveRide(null);
-        setIncomingRequest(null);
+        setIncomingRequests((prev) => prev.filter((r) => (r._id || r.id) !== d.rideId));
         alert(d.message || "The passenger has cancelled this ride request.");
       }
     });
     s.on("rideAccepted", async (d) => {
       if (user.role === "user") {
+        // Rider accepted — clear the countdown immediately
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+        setRequestCountdown(null);
+        setRequestExpired(false);
         setActiveRideId(d.rideId);
         setBookingStatus("A driver is on the way!");
         if (d.riderId) {
@@ -203,37 +212,55 @@ const Dashboard = () => {
     );
   };
 
+  // Helper: start the 30-second countdown after a ride is requested
+  const startRequestCountdown = (rideId) => {
+    clearInterval(countdownRef.current);
+    let remaining = 30;
+    setRequestCountdown(remaining);
+    setRequestExpired(false);
+    countdownRef.current = setInterval(async () => {
+      remaining -= 1;
+      setRequestCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+        setRequestCountdown(null);
+        // Auto-cancel on the backend
+        try {
+          await axios.put(
+            `http://localhost:5003/api/rides/${rideId}/status`,
+            { status: "cancelled" },
+            authHeaders(),
+          );
+        } catch { /* ignore */ }
+        setActiveRideId(null);
+        setBookingStatus("");
+        setRequestExpired(true);
+      }
+    }, 1000);
+  };
+
   const requestRide = async () => {
     if (!pickup || !destination || !fare) return;
     setLoading(true);
     setBookingStatus("");
+    setRequestExpired(false);
     try {
       const payload = {
-        pickupLocation: {
-          lat: pickup.lat,
-          lng: pickup.lng,
-          address: pickup.address || "Map Selection",
-        },
-        dropoffLocation: {
-          lat: destination.lat,
-          lng: destination.lng,
-          address: destination.address || "Map Selection",
-        },
+        pickupLocation: { lat: pickup.lat, lng: pickup.lng, address: pickup.address || "Map Selection" },
+        dropoffLocation: { lat: destination.lat, lng: destination.lng, address: destination.address || "Map Selection" },
         distance: routeInfo.distance,
         duration: routeInfo.duration,
         fare: parseFloat(fare),
       };
-      const { data } = await axios.post(
-        "http://localhost:5003/api/rides/request",
-        payload,
-        authHeaders(),
-      );
+      const { data } = await axios.post("http://localhost:5003/api/rides/request", payload, authHeaders());
       setActiveRideId(data._id);
       setBookingStatus("Ride requested! Waiting for a driver...");
       socket?.emit("rideRequest", {
         ...data,
         userInfo: { name: user.name, phone: user.phone || "N/A", profilePicture: user.profilePicture || DEFAULT_AVATAR },
       });
+      startRequestCountdown(data._id);
     } catch {
       setBookingStatus("Failed to request ride.");
     } finally {
@@ -244,6 +271,11 @@ const Dashboard = () => {
   const cancelRide = async () => {
     if (!activeRideId) return;
     setLoading(true);
+    // Also clear countdown if manually cancelled
+    clearInterval(countdownRef.current);
+    countdownRef.current = null;
+    setRequestCountdown(null);
+    setRequestExpired(false);
     try {
       await axios.put(
         `http://localhost:5003/api/rides/${activeRideId}/status`,
@@ -275,41 +307,37 @@ const Dashboard = () => {
       setIsOnline(newStatus);
       if (updateUser) updateUser({ isOnline: newStatus });
       if (socket && newStatus) socket.emit("join", "riders");
-      if (!newStatus) setIncomingRequest(null);
+      if (!newStatus) setIncomingRequests([]);
     } catch (e) {
       alert("Error: " + (e.response?.data?.message || e.message));
     }
   };
 
-  const acceptRide = async () => {
-    if (!incomingRequest) return;
+  const acceptRide = async (rideToAccept) => {
+    if (!rideToAccept) return;
     try {
       await axios.put(
-        `http://localhost:5003/api/rides/${incomingRequest._id}/status`,
+        `http://localhost:5003/api/rides/${rideToAccept._id}/status`,
         { status: "accepted" },
         authHeaders(),
       );
       socket?.emit("rideAccepted", {
-        rideId: incomingRequest._id,
-        userId: incomingRequest.user?._id || incomingRequest.user,
+        rideId: rideToAccept._id,
+        userId: rideToAccept.user?._id || rideToAccept.user,
         riderId: user._id,
         riderInfo: {
           name: user.name,
           phone: user.phone || "N/A",
           rating: user.rating || 5.0,
           profilePicture: user.profilePicture || DEFAULT_AVATAR,
-          vehicle: user.vehicle || {
-            make: "Toyota",
-            model: "Corolla",
-            licensePlate: "DHK-123",
-          },
+          vehicle: user.vehicle || { make: "Toyota", model: "Corolla", licensePlate: "DHK-123" },
         },
       });
-      setActiveRide({ ...incomingRequest, status: "accepted" });
-      setIncomingRequest(null);
+      setActiveRide({ ...rideToAccept, status: "accepted" });
+      setIncomingRequests([]); // Clear all pending requests once one is accepted
     } catch {
       alert("Failed to accept. Another rider may have taken it.");
-      setIncomingRequest(null);
+      setIncomingRequests((prev) => prev.filter((r) => r._id !== rideToAccept._id));
     }
   };
 
@@ -411,9 +439,9 @@ const Dashboard = () => {
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
       <RideRequestModal
-        request={incomingRequest}
+        requests={incomingRequests}
         onAccept={acceptRide}
-        onDecline={() => setIncomingRequest(null)}
+        onDecline={(rideId) => setIncomingRequests((prev) => prev.filter((r) => (r._id || r.id) !== rideId))}
       />
 
       {/* Payment waiting */}
@@ -686,6 +714,8 @@ const Dashboard = () => {
                 rideStartTime={rideStartTime}
                 elapsedTime={elapsedTime}
                 riderInfo={riderInfo}
+                requestCountdown={requestCountdown}
+                requestExpired={requestExpired}
                 onLocationsUpdate={handleLocationsUpdate}
                 onRouteCalculated={handleRouteCalculated}
                 onRequestRide={requestRide}
