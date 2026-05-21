@@ -221,6 +221,7 @@ const RiderPanel = ({
             <RideMap
               initialPickup={activeRide?.pickupLocation}
               initialDestination={activeRide?.dropoffLocation}
+              hideSearch={true}
             />
           </div>
         </div>
