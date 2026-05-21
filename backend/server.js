@@ -7,24 +7,23 @@ const connectDB = require("./config/db");
 const Rider = require("./models/Rider");
 
 // Load env vars
-import dotenv from "dotenv";
 dotenv.config();
 
 // Connect to database
 connectDB().then(async () => {
   try {
     const User = require("./models/User");
-    const adminExists = await User.findOne({ email: "admin@ridex.com" });
+    const adminExists = await User.findOne({ email: "admin@transiqo.com" });
     if (!adminExists) {
       const admin = new User({
-        name: "RideX Administrator",
-        email: "admin@ridex.com",
+        name: "transiQo Administrator",
+        email: "admin@transiqo.com",
         password: "admin123",
         role: "admin",
         phone: "1234567890",
       });
       await admin.save();
-      console.log("Admin account auto-seeded: admin@ridex.com / admin123");
+      console.log("Admin account auto-seeded: admin@transiqo.com / admin123");
     }
   } catch (err) {
     console.error("Error auto-seeding admin:", err);
@@ -34,7 +33,7 @@ connectDB().then(async () => {
 const app = express();
 const server = http.createServer(app);
 
-// Setup Socket.IO for RideX real-time requirements
+// Setup Socket.IO for transiQo real-time requirements
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
@@ -58,7 +57,7 @@ app.use("/api/admin", adminRoutes);
 
 // Basic route to check if server is running
 app.get("/", (req, res) => {
-  res.send("RideX Backend Server is Running");
+  res.send("transiQo Backend Server is Running");
 });
 
 // Real-time ride updates and broadcasting
@@ -206,4 +205,4 @@ server.on("error", (error) => {
   }
 });
 
-server.listen(PORT, () => console.log(`RideX Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`transiQo Server running on port ${PORT}`));

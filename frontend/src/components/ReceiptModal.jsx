@@ -8,7 +8,7 @@ const ReceiptModal = ({ rideId, autoAction, onClose }) => {
   const containerRef = useRef();
 
   const token = () => {
-    const s = localStorage.getItem("rideX_user");
+    const s = localStorage.getItem("transiQo_user");
     return s ? JSON.parse(s).token : "";
   };
 
@@ -245,7 +245,7 @@ const ReceiptModal = ({ rideId, autoAction, onClose }) => {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                      rideX
+                      transiQo
                     </span>
                     <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 rounded text-[10px] font-bold uppercase tracking-wider">
                       {receipt.status}
@@ -435,8 +435,8 @@ const ReceiptModal = ({ rideId, autoAction, onClose }) => {
 
               {/* Footer Note */}
               <div className="text-center text-[10px] text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <p>Thank you for choosing rideX. Support: support@ridex.com</p>
-                <p className="mt-0.5 font-mono">rideX Technologies Ltd. • Tech District</p>
+                <p>Thank you for choosing transiQo. Support: support@transiqo.com</p>
+                <p className="mt-0.5 font-mono">transiQo Technologies Ltd. • Tech District</p>
               </div>
             </div>
           )}

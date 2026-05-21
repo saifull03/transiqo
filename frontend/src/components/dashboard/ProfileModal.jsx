@@ -50,7 +50,7 @@ const ProfileModal = ({ onClose }) => {
   const fileRef = useRef();
 
   const token = () => {
-    const s = localStorage.getItem("rideX_user");
+    const s = localStorage.getItem("transiQo_user");
     return s ? JSON.parse(s).token : "";
   };
   const headers = () => ({ headers: { Authorization: `Bearer ${token()}` } });

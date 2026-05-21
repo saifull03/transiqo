@@ -12,8 +12,8 @@ const History = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const token = localStorage.getItem("rideX_user")
-          ? JSON.parse(localStorage.getItem("rideX_user")).token
+        const token = localStorage.getItem("transiQo_user")
+          ? JSON.parse(localStorage.getItem("transiQo_user")).token
           : "";
         const config = { headers: { Authorization: `Bearer ${token}` } };
 

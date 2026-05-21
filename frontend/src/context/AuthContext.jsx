@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is stored in local storage
-    const storedUser = localStorage.getItem('rideX_user');
+    const storedUser = localStorage.getItem('transiQo_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -17,19 +17,19 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem('rideX_user', JSON.stringify(userData));
+    localStorage.setItem('transiQo_user', JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('rideX_user');
+    localStorage.removeItem('transiQo_user');
   };
 
   // Update user data in context and localStorage (for profile updates)
   const updateUser = (updatedData) => {
     const newUser = { ...user, ...updatedData };
     setUser(newUser);
-    localStorage.setItem('rideX_user', JSON.stringify(newUser));
+    localStorage.setItem('transiQo_user', JSON.stringify(newUser));
   };
 
   return (

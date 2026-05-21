@@ -15,7 +15,7 @@ const seedAdmin = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB Connected for Seeding...');
 
-    const email = 'admin@ridex.com';
+    const email = 'admin@transiqo.com';
     const adminExists = await User.findOne({ email });
 
     if (adminExists) {
@@ -24,7 +24,7 @@ const seedAdmin = async () => {
     }
 
     const admin = new User({
-      name: 'RideX Administrator',
+      name: 'transiQo Administrator',
       email,
       password: 'admin123', // Will be hashed automatically by userSchema pre('save') middleware
       role: 'admin',
@@ -33,7 +33,7 @@ const seedAdmin = async () => {
 
     await admin.save();
     console.log('Admin user created successfully!');
-    console.log('Email: admin@ridex.com');
+    console.log('Email: admin@transiqo.com');
     console.log('Password: admin123');
     process.exit(0);
   } catch (error) {

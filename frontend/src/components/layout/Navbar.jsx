@@ -35,18 +35,25 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.08 3.11H5.77L6.85 7zM19 17H5v-5h14v5z"/>
-                <circle cx="7.5" cy="14.5" r="1.5"/>
-                <circle cx="16.5" cy="14.5" r="1.5"/>
-              </svg>
+          <Link to="/" className="flex items-center gap-3 group select-none">
+            {/* Icon mark */}
+            <div className="relative w-9 h-9 flex-shrink-0">
+              {/* Glow ring */}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 opacity-40 blur-md group-hover:opacity-70 transition-opacity duration-300" />
+              {/* Icon container */}
+              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                {/* Lightning bolt / speed icon */}
+                <svg className="w-5 h-5 text-white drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" />
+                </svg>
+              </div>
             </div>
-            <span className="text-xl font-black text-white tracking-tight">
-              Ride<span className="text-blue-400">X</span>
+            {/* Wordmark */}
+            <span className="text-xl font-black tracking-tight leading-none">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400">transi</span><span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-pink-400">Q</span><span className="text-white">o</span>
             </span>
           </Link>
+
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-2">

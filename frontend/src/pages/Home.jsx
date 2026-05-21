@@ -6,14 +6,14 @@ const Home = () => {
       {/* Hero background image/illustration */}
       <img
         src="/assets/hero-ride.svg"
-        alt="RideX Hero"
+        alt="transiQo Hero"
         className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl opacity-20 pointer-events-none select-none z-0"
         style={{ objectFit: "cover" }}
       />
 
       {/* Animated headline */}
       <h1 className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 mb-6 tracking-tight animate-fade-in-up z-10">
-        Go Anywhere with RideX
+        Go Anywhere with transiQo
       </h1>
       <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mb-10 animate-fade-in z-10">
         The most reliable, fast, and modern ride-sharing platform. Request a
@@ -148,10 +148,10 @@ const Home = () => {
           <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-3">
             Riders{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">love</span>{" "}
-            RideX
+            transiQo
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-lg max-w-xl mx-auto">
-            Join thousands of happy commuters who trust RideX every day.
+            Join thousands of happy commuters who trust transiQo every day.
           </p>
         </div>
 
@@ -164,7 +164,7 @@ const Home = () => {
               color: "from-pink-500 to-rose-600",
               role: "Daily Commuter",
               rating: 5,
-              text: "RideX is always on time and the drivers are super friendly. I feel safe every single ride!",
+              text: "transiQo is always on time and the drivers are super friendly. I feel safe every single ride!",
             },
             {
               name: "Rahim U.",

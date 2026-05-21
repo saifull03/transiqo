@@ -31,7 +31,7 @@ const Admin = () => {
   const [selectedProfile, setSelectedProfile] = useState(null); // { type, data }
 
   const token = () => {
-    const s = localStorage.getItem("rideX_user");
+    const s = localStorage.getItem("transiQo_user");
     return s ? JSON.parse(s).token : "";
   };
 
