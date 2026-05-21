@@ -65,20 +65,37 @@ const UserPanel = ({
         {/* Fare card */}
         {routeInfo && fare && (
           <div className="bg-gradient-to-br from-blue-600/20 to-indigo-700/20 border border-blue-500/20 rounded-2xl p-4">
-            <div className="flex justify-between text-sm text-gray-400 mb-1">
-              <span>Distance</span>
-              <span className="text-white font-semibold">
-                {routeInfo.distance} km
-              </span>
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-[10px] font-bold text-blue-300/70 uppercase tracking-wider">Fare Breakdown</h4>
+              {routeInfo.trafficCondition && routeInfo.trafficCondition !== 'clear' && (
+                <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-black tracking-widest border ${
+                  routeInfo.trafficCondition === 'heavy' ? 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse' : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                }`}>
+                  {routeInfo.trafficCondition} Traffic
+                </span>
+              )}
             </div>
-            <div className="flex justify-between text-sm text-gray-400 mb-3 pb-3 border-b border-white/10">
-              <span>Est. Time</span>
-              <span className="text-white font-semibold">
-                {routeInfo.duration} min
-              </span>
+            <div className="space-y-2 mb-3 pb-3 border-b border-white/10 text-sm text-gray-300">
+              <div className="flex justify-between items-center">
+                <span>Base Fare</span>
+                <span className="font-semibold text-white">৳200</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Distance <span className="text-[10px] text-gray-500 ml-1">({routeInfo.distance} km × ৳21)</span></span>
+                <span className="font-semibold text-white">৳{(routeInfo.distance * 21).toFixed(0)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center flex-wrap">
+                  Time <span className="text-[10px] text-gray-500 ml-1">({routeInfo.duration} min × ৳3)</span>
+                  {routeInfo.originalDuration && routeInfo.duration > routeInfo.originalDuration && (
+                    <span className="text-[10px] text-red-400 ml-1 font-bold bg-red-500/10 px-1.5 py-0.5 rounded">+{routeInfo.duration - routeInfo.originalDuration} min delay</span>
+                  )}
+                </span>
+                <span className="font-semibold text-white">৳{(routeInfo.duration * 3).toFixed(0)}</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-300 font-semibold">Total Fare</span>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-gray-300 font-semibold text-sm">Total Estimated Fare</span>
               <span className="text-3xl font-black text-blue-400">৳{fare}</span>
             </div>
           </div>
@@ -267,6 +284,7 @@ const UserPanel = ({
           initialDestination={destination}
           onLocationsUpdate={onLocationsUpdate}
           onRouteCalculated={onRouteCalculated}
+          trafficCondition={routeInfo?.trafficCondition}
         />
       </div>
     </div>

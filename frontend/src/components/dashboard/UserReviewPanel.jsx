@@ -89,7 +89,7 @@ const UserReviewPanel = ({ authHeaders }) => {
               >
                 <div className="flex items-center justify-between mb-3 gap-3">
                   <div>
-                    <p className="text-sm text-gray-400">Driver reviewed</p>
+                    <p className="text-sm text-gray-400">Review for driver</p>
                     <p className="text-white font-semibold">
                       {r.rider?.name || "Driver"}
                     </p>

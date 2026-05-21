@@ -133,7 +133,7 @@ const SearchInput = ({
 );
 
 // ── Main RideMap component ────────────────────────────────────────────────────
-const RideMap = ({ onLocationsUpdate, onRouteCalculated, initialPickup, initialDestination, hideSearch = false }) => {
+const RideMap = ({ onLocationsUpdate, onRouteCalculated, initialPickup, initialDestination, hideSearch = false, trafficCondition = 'clear' }) => {
   const [pickup, setPickup] = useState(initialPickup || null);
   const [destination, setDestination] = useState(initialDestination || null);
   const [routeCoords, setRouteCoords] = useState([]);
@@ -384,7 +384,7 @@ const RideMap = ({ onLocationsUpdate, onRouteCalculated, initialPickup, initialD
           </Marker>
         )}
         {routeCoords.length > 0 && (
-          <Polyline positions={routeCoords} color="#3b82f6" weight={5} opacity={0.8} />
+          <Polyline positions={routeCoords} color={trafficCondition === 'heavy' ? '#ef4444' : trafficCondition === 'moderate' ? '#f97316' : '#3b82f6'} weight={5} opacity={0.8} />
         )}
       </MapContainer>
     </div>

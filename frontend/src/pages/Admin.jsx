@@ -13,7 +13,10 @@ const Admin = () => {
   // Hover states for interactive charts
   const [hoveredRevenueIdx, setHoveredRevenueIdx] = useState(null);
   const [hoveredRidesIdx, setHoveredRidesIdx] = useState(null);
-
+  const [revenueTimeframe, setRevenueTimeframe] = useState("weekly");
+  const [printMonthModal, setPrintMonthModal] = useState(false);
+  const [selectedPrintMonth, setSelectedPrintMonth] = useState("");
+  
   // Data states
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -29,6 +32,7 @@ const Admin = () => {
   const [receiptConfig, setReceiptConfig] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id, name }
   const [selectedProfile, setSelectedProfile] = useState(null); // { type, data }
+  const [selectedDriverStats, setSelectedDriverStats] = useState(null); // { rider object }
 
   const token = () => {
     const s = localStorage.getItem("transiQo_user");
@@ -186,6 +190,146 @@ const Admin = () => {
       rev.rider?.name?.toLowerCase().includes(q)
     );
   });
+
+  const executePrintMonth = (targetMonthStr) => {
+    setPrintMonthModal(false);
+    
+    // Filter rides to match exactly targetMonthStr
+    const monthRides = rides.filter(r => {
+      if (r.status !== 'completed' && r.status !== 'started') return false;
+      const d = new Date(r.createdAt);
+      const str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return str === targetMonthStr;
+    });
+
+    let totalGross = 0;
+    let totalSystem = 0;
+    let ledgerRows = '';
+    
+    if (monthRides.length === 0) {
+      ledgerRows = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No completed rides found for this month.</td></tr>';
+    } else {
+      monthRides.forEach(r => {
+        const date = new Date(r.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const pass = r.user?.name || 'Unknown';
+        const drv = r.rider?.name || 'Unknown';
+        const fare = r.fare || 0;
+        const systemCut = fare * 0.25;
+        
+        totalGross += fare;
+        totalSystem += systemCut;
+        
+        ledgerRows += `
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${date}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${pass}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #f3f4f6;">${drv}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: 600;">৳${fare.toFixed(2)}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: right; color: #16a34a; font-weight: bold;">৳${systemCut.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    const uniqueId = `print-single-month-${Date.now()}`;
+    const iframe = document.createElement("iframe");
+    iframe.id = uniqueId;
+    iframe.name = uniqueId;
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    
+    // Parse targetMonthStr ("YYYY-MM") safely without timezone shifting issues
+    const [year, month] = targetMonthStr.split('-');
+    const displayMonth = new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    doc.write(`
+      <html>
+        <head>
+          <title>TransiQo - ${displayMonth} Report</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; color: #111827; }
+            .header { text-align: center; margin-bottom: 40px; }
+            .title { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; }
+            .subtitle { font-size: 14px; color: #6b7280; margin: 0; }
+            
+            .summary { display: flex; justify-content: space-between; background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #e5e7eb; }
+            .stat { text-align: center; flex: 1; border-right: 1px solid #e5e7eb; }
+            .stat:last-child { border-right: none; }
+            .stat-label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+            .stat-value { font-size: 20px; font-weight: 800; }
+            .text-green { color: #16a34a; }
+            .text-blue { color: #2563eb; }
+            
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            th { text-align: left; padding: 12px; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; color: #4b5563; }
+            th.right { text-align: right; }
+            
+            .footer { margin-top: 50px; font-size: 10px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">TransiQo Revenue Report</h1>
+            <p class="subtitle">Period: ${displayMonth}</p>
+          </div>
+          
+          <div class="summary">
+            <div class="stat">
+              <div class="stat-label">Total Completed Rides</div>
+              <div class="stat-value text-blue">${monthRides.length}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Gross Revenue</div>
+              <div class="stat-value">৳${totalGross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits:2})}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">System Revenue (25%)</div>
+              <div class="stat-value text-green">৳${totalSystem.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits:2})}</div>
+            </div>
+          </div>
+          
+          <h2 style="font-size: 16px; margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Detailed Ride Ledger</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Passenger</th>
+                <th>Driver</th>
+                <th class="right">Total Fare (Gross)</th>
+                <th class="right">System Cut (25%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ledgerRows}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            Generated on ${new Date().toLocaleString()} by TransiQo Admin System
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.contentWindow.focus();
+    setTimeout(() => {
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 60000);
+    }, 500);
+  };
 
   if (!user || user.role !== "admin") {
     return (
@@ -349,8 +493,9 @@ const Admin = () => {
                       border: "border-amber-500/20",
                     },
                     {
-                      label: "System Revenue",
-                      value: `৳${stats.totalEarnings?.toLocaleString() || 0}`,
+                      label: "System Revenue (25%)",
+                      value: `৳${stats.systemRevenue?.toLocaleString() || 0}`,
+                      subValue: `Gross: ৳${stats.totalEarnings?.toLocaleString() || 0}`,
                       icon: "💰",
                       bg: "from-red-600/20 to-red-700/5",
                       border: "border-red-500/20",
@@ -368,6 +513,11 @@ const Admin = () => {
                           <p className="text-3xl font-black text-white mt-2">
                             {card.value}
                           </p>
+                          {card.subValue && (
+                            <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-wider">
+                              {card.subValue}
+                            </p>
+                          )}
                         </div>
                         <div className="text-3xl">{card.icon}</div>
                       </div>
@@ -381,104 +531,157 @@ const Admin = () => {
                   <div className="lg:col-span-2 space-y-6">
                     {/* Revenue Trend SVG Area Chart */}
                     <div className="bg-gray-900 border border-white/5 rounded-3xl p-6 relative">
-                      <div className="flex justify-between items-center mb-6">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div>
-                          <h3 className="text-lg font-black text-white">Revenue Trend</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">Daily earnings over the last 7 days</p>
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-black text-white">Revenue Trend</h3>
+                            <div className="bg-black/50 p-1 rounded-lg flex border border-white/10">
+                              <button
+                                onClick={() => { setRevenueTimeframe("weekly"); setHoveredRevenueIdx(null); }}
+                                className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition ${revenueTimeframe === "weekly" ? "bg-white/20 text-white" : "text-gray-500 hover:text-white"}`}
+                              >
+                                Last 7 Days
+                              </button>
+                              <button
+                                onClick={() => { setRevenueTimeframe("monthly"); setHoveredRevenueIdx(null); }}
+                                className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition ${revenueTimeframe === "monthly" ? "bg-white/20 text-white" : "text-gray-500 hover:text-white"}`}
+                              >
+                                Monthly
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {revenueTimeframe === "weekly" ? "Daily gross earnings over the last 7 days" : "Monthly earnings over the last 12 months"}
+                          </p>
                         </div>
-                        <span className="px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold">
-                          ৳{stats.revenueTrend ? stats.revenueTrend.reduce((sum, d) => sum + d.revenue, 0).toLocaleString() : 0} Total
-                        </span>
+                        <div className="text-right flex items-center gap-3">
+                          {revenueTimeframe === "monthly" && (
+                            <button
+                              onClick={() => {
+                                const d = new Date();
+                                setSelectedPrintMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+                                setPrintMonthModal(true);
+                              }}
+                              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-[10px] font-bold text-white transition-colors flex items-center gap-1.5"
+                            >
+                              🖨️ Print Report
+                            </button>
+                          )}
+                          <div>
+                            <span className="px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-bold block mb-1">
+                              ৳{(() => {
+                                const data = revenueTimeframe === "weekly" ? stats.revenueTrend : stats.monthlyRevenueTrend;
+                                return data ? data.reduce((sum, d) => sum + d.revenue, 0).toLocaleString() : 0;
+                              })()} Gross
+                            </span>
+                            <span className="px-3 py-1 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-[10px] font-bold block">
+                              ৳{(() => {
+                                const data = revenueTimeframe === "weekly" ? stats.revenueTrend : stats.monthlyRevenueTrend;
+                                return data ? data.reduce((sum, d) => sum + d.systemRevenue, 0).toLocaleString() : 0;
+                              })()} System Cut
+                            </span>
+                          </div>
+                        </div>
                       </div>
                       
-                      {stats.revenueTrend && stats.revenueTrend.length > 0 ? (
-                        <div className="relative">
-                          <svg className="w-full h-56 overflow-visible" viewBox="0 0 500 200">
-                            <defs>
-                              <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
-                                <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
-                              </linearGradient>
-                            </defs>
+                      {(() => {
+                        const chartData = revenueTimeframe === "weekly" ? stats.revenueTrend : stats.monthlyRevenueTrend;
+                        if (chartData && chartData.length > 0) {
+                          const maxRevVal = Math.max(...chartData.map(d => d.revenue), 100);
+                          const stepX = revenueTimeframe === "weekly" ? 68 : 450 / 11;
+                          
+                          return (
+                            <div className="relative">
+                              <svg className="w-full h-56 overflow-visible" viewBox="0 0 500 200">
+                                <defs>
+                                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
+                                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                                  </linearGradient>
+                                </defs>
 
-                            {/* Grid Lines */}
-                            {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-                              const y = 30 + ratio * 130;
-                              const maxRevVal = Math.max(...stats.revenueTrend.map(d => d.revenue), 100);
-                              const labelVal = (maxRevVal * (1 - ratio)).toFixed(0);
-                              return (
-                                <g key={idx}>
-                                  <line x1="45" y1={y} x2="480" y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="3,3" />
-                                  <text x="35" y={y + 4} fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" className="font-mono">
-                                    ৳{Number(labelVal).toLocaleString()}
-                                  </text>
-                                </g>
-                              );
-                            })}
-
-                            {/* X Axis Labels */}
-                            {stats.revenueTrend.map((d, i) => {
-                              const x = 55 + i * 68;
-                              return (
-                                <text key={i} x={x} y="185" fill="rgba(255,255,255,0.5)" fontSize="9" textAnchor="middle" className="font-bold">
-                                  {d.day}
-                                </text>
-                              );
-                            })}
-
-                            {/* Draw Area path & Line path */}
-                            {(() => {
-                              const maxRevVal = Math.max(...stats.revenueTrend.map(d => d.revenue), 100);
-                              const points = stats.revenueTrend.map((d, i) => ({
-                                x: 55 + i * 68,
-                                y: 160 - (d.revenue / maxRevVal) * 130,
-                              }));
-                              const lineD = `M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`;
-                              const areaD = `M 55 160 L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${points[points.length-1].x} 160 Z`;
-                              
-                              return (
-                                <>
-                                  <path d={areaD} fill="url(#revenueGrad)" />
-                                  <path d={lineD} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                  
-                                  {/* Circles / Hover Hotspots */}
-                                  {points.map((p, i) => (
-                                    <g key={i}>
-                                      <circle
-                                        cx={p.x}
-                                        cy={p.y}
-                                        r={hoveredRevenueIdx === i ? 6 : 4}
-                                        className="fill-red-500 stroke-gray-900 transition-all duration-150 cursor-pointer"
-                                        strokeWidth={2}
-                                        onMouseEnter={() => setHoveredRevenueIdx(i)}
-                                        onMouseLeave={() => setHoveredRevenueIdx(null)}
-                                      />
+                                {/* Grid Lines */}
+                                {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                                  const y = 30 + ratio * 130;
+                                  const labelVal = (maxRevVal * (1 - ratio)).toFixed(0);
+                                  return (
+                                    <g key={idx}>
+                                      <line x1="45" y1={y} x2="480" y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="3,3" />
+                                      <text x="35" y={y + 4} fill="rgba(255,255,255,0.4)" fontSize="9" textAnchor="end" className="font-mono">
+                                        ৳{Number(labelVal).toLocaleString()}
+                                      </text>
                                     </g>
-                                  ))}
-                                </>
-                              );
-                            })()}
-                          </svg>
+                                  );
+                                })}
 
-                          {/* Hover Tooltip overlay */}
-                          {hoveredRevenueIdx !== null && stats.revenueTrend[hoveredRevenueIdx] && (
-                            <div 
-                              className="absolute bg-gray-950/95 backdrop-blur border border-white/10 px-3 py-2 rounded-2xl shadow-xl pointer-events-none z-50 text-xs transition-all duration-100 animate-fade-in"
-                              style={{
-                                left: `${11 + hoveredRevenueIdx * 13.6}%`,
-                                top: `${Math.min(100, 160 - (stats.revenueTrend[hoveredRevenueIdx].revenue / Math.max(...stats.revenueTrend.map(d => d.revenue), 100)) * 60)}px`,
-                                transform: 'translate(-50%, -120%)'
-                              }}
-                            >
-                              <p className="text-gray-400 font-bold">{stats.revenueTrend[hoveredRevenueIdx].date}</p>
-                              <p className="text-red-400 font-black text-sm mt-0.5">৳{stats.revenueTrend[hoveredRevenueIdx].revenue?.toLocaleString()}</p>
-                              <p className="text-gray-500 font-medium text-[10px]">{stats.revenueTrend[hoveredRevenueIdx].rides} ride{stats.revenueTrend[hoveredRevenueIdx].rides !== 1 ? 's' : ''}</p>
+                                {/* X Axis Labels */}
+                                {chartData.map((d, i) => {
+                                  const x = 55 + i * stepX;
+                                  // For monthly, only show every other label if it gets too crowded, or just rotate. We'll just show them all since it's 12.
+                                  return (
+                                    <text key={i} x={x} y="185" fill="rgba(255,255,255,0.5)" fontSize="8" textAnchor="middle" className="font-bold">
+                                      {revenueTimeframe === "weekly" ? d.day : d.month}
+                                    </text>
+                                  );
+                                })}
+
+                                {/* Draw Area path & Line path */}
+                                {(() => {
+                                  const points = chartData.map((d, i) => ({
+                                    x: 55 + i * stepX,
+                                    y: 160 - (d.revenue / maxRevVal) * 130,
+                                  }));
+                                  const lineD = `M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+                                  const areaD = `M 55 160 L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${points[points.length-1].x} 160 Z`;
+                                  
+                                  return (
+                                    <>
+                                      <path d={areaD} fill="url(#revenueGrad)" />
+                                      <path d={lineD} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                      
+                                      {/* Circles / Hover Hotspots */}
+                                      {points.map((p, i) => (
+                                        <g key={i}>
+                                          <circle
+                                            cx={p.x}
+                                            cy={p.y}
+                                            r={hoveredRevenueIdx === i ? 6 : 4}
+                                            className="fill-red-500 stroke-gray-900 transition-all duration-150 cursor-pointer"
+                                            strokeWidth={2}
+                                            onMouseEnter={() => setHoveredRevenueIdx(i)}
+                                            onMouseLeave={() => setHoveredRevenueIdx(null)}
+                                          />
+                                        </g>
+                                      ))}
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+
+                              {/* Hover Tooltip overlay */}
+                              {hoveredRevenueIdx !== null && chartData[hoveredRevenueIdx] && (
+                                <div 
+                                  className="absolute bg-gray-950/95 backdrop-blur border border-white/10 px-3 py-2 rounded-2xl shadow-xl pointer-events-none z-50 text-xs transition-all duration-100 animate-fade-in"
+                                  style={{
+                                    left: `${11 + hoveredRevenueIdx * (revenueTimeframe === "weekly" ? 13.6 : (450/11)/5)}%`,
+                                    top: `${Math.min(100, 160 - (chartData[hoveredRevenueIdx].revenue / maxRevVal) * 60)}px`,
+                                    transform: 'translate(-50%, -120%)'
+                                  }}
+                                >
+                                  <p className="text-gray-400 font-bold">{revenueTimeframe === "weekly" ? chartData[hoveredRevenueIdx].date : chartData[hoveredRevenueIdx].month}</p>
+                                  <p className="text-red-400 font-black text-sm mt-0.5">৳{chartData[hoveredRevenueIdx].revenue?.toLocaleString()} <span className="text-[10px] text-gray-500 font-medium">Gross</span></p>
+                                  <p className="text-green-400 font-black text-xs mt-0.5">৳{chartData[hoveredRevenueIdx].systemRevenue?.toLocaleString()} <span className="text-[10px] text-gray-500 font-medium">Cut</span></p>
+                                  <p className="text-gray-500 font-medium text-[10px] mt-1">{chartData[hoveredRevenueIdx].rides} ride{chartData[hoveredRevenueIdx].rides !== 1 ? 's' : ''}</p>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="h-48 flex items-center justify-center text-gray-500">No trend data available</div>
-                      )}
+                          );
+                        } else {
+                          return (
+                            <div className="h-48 flex items-center justify-center text-gray-500">No trend data available</div>
+                          );
+                        }
+                      })()}
                     </div>
 
                     {/* Ride Count Trend SVG Bar Chart */}
@@ -778,6 +981,51 @@ const Admin = () => {
                         <p className="text-gray-500 text-sm">No drivers data available yet</p>
                       )}
                     </div>
+
+                    {/* Needs Monitoring Card (Worst Riders) */}
+                    <div className="bg-gray-900 border border-red-500/30 rounded-3xl p-6">
+                      <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">⚠️ Needs Monitoring</h3>
+                      {stats.worstRiders && stats.worstRiders.length > 0 ? (
+                        <div className="space-y-4">
+                          {stats.worstRiders.map((driver) => (
+                            <div key={driver._id} className="flex items-center gap-3 p-3 bg-red-500/5 rounded-2xl border border-red-500/10 relative overflow-hidden group">
+                              <img
+                                src={driver.profilePicture || DEFAULT_AVATAR}
+                                alt={driver.name}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-red-500/50"
+                                onError={(e) => {
+                                  e.target.src = DEFAULT_AVATAR;
+                                }}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-white font-bold text-xs truncate">{driver.name}</p>
+                                  <span className="text-[10px] font-bold text-red-400 flex items-center">
+                                    ⭐ {driver.rating?.toFixed(1)}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-gray-400 truncate">
+                                  {driver.phone}
+                                </p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <button
+                                  onClick={() => {
+                                    setActiveTab("drivers");
+                                    setSearchQuery(driver.name);
+                                  }}
+                                  className="px-2.5 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/30 rounded-lg text-[10px] font-bold uppercase transition"
+                                >
+                                  Review
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm">No drivers currently need monitoring.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -991,7 +1239,13 @@ const Admin = () => {
                                 </span>
                               )}
                             </td>
-                            <td className="py-4 px-4 text-right space-x-2">
+                            <td className="py-4 px-4 text-right flex justify-end gap-2">
+                              <button
+                                onClick={() => setSelectedDriverStats(driver)}
+                                className="px-3 py-1 bg-purple-600/10 hover:bg-purple-600 text-purple-400 hover:text-white rounded-lg text-xs font-bold transition border border-purple-500/20"
+                              >
+                                Stats & Reviews
+                              </button>
                               <button
                                 onClick={() => setSelectedProfile({ type: "rider", data: driver })}
                                 className="px-3 py-1 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-xs font-bold transition border border-blue-500/20"
@@ -1581,6 +1835,177 @@ const Admin = () => {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Print Month Selection Modal */}
+      {printMonthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative animate-fade-in-up">
+            <div className="p-6 border-b border-white/5">
+              <h2 className="text-xl font-black text-white">Select Month</h2>
+              <p className="text-xs text-gray-400 mt-1">Choose a month to generate a detailed report.</p>
+            </div>
+            <div className="p-6">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                Month & Year
+              </label>
+              <input
+                type="month"
+                value={selectedPrintMonth}
+                onChange={(e) => setSelectedPrintMonth(e.target.value)}
+                className="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500 transition-colors"
+              />
+            </div>
+            <div className="p-6 border-t border-white/5 flex gap-4">
+              <button
+                onClick={() => setPrintMonthModal(false)}
+                className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => executePrintMonth(selectedPrintMonth)}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-bold text-white transition shadow-lg shadow-red-500/20"
+              >
+                Generate Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Driver Stats & Reviews Modal */}
+      {selectedDriverStats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative animate-fade-in-up">
+            <div className="p-6 border-b border-white/5 flex justify-between items-start">
+              <div className="flex items-center gap-4">
+                <img
+                  src={selectedDriverStats.profilePicture || DEFAULT_AVATAR}
+                  alt={selectedDriverStats.name}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-white/10 bg-gray-800"
+                  onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
+                />
+                <div>
+                  <h2 className="text-xl font-black text-white">{selectedDriverStats.name}</h2>
+                  <p className="text-xs text-gray-400 mt-1">{selectedDriverStats.email} • {selectedDriverStats.phone}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedDriverStats(null)} className="p-2 hover:bg-white/10 rounded-xl transition text-gray-400 hover:text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+              {/* High Level Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center flex flex-col items-center justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Total Earnings</p>
+                  <p className="text-xl font-black text-green-400">৳{selectedDriverStats.earnings || 0}</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center flex flex-col items-center justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Avg Rating</p>
+                  <p className="text-xl font-black text-yellow-400">⭐ {selectedDriverStats.rating || 0}</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center flex flex-col items-center justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Vehicle</p>
+                  <p className="text-sm font-bold text-white mt-1 truncate max-w-[120px]">{selectedDriverStats.vehicleDetails?.model || "N/A"}</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center flex flex-col items-center justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Status</p>
+                  <p className={`text-sm font-black mt-1 ${selectedDriverStats.isBlocked ? 'text-red-400' : selectedDriverStats.isOnline ? 'text-green-400' : 'text-gray-400'}`}>
+                    {selectedDriverStats.isBlocked ? 'BLOCKED' : selectedDriverStats.isOnline ? 'ONLINE' : 'OFFLINE'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Reviews List */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-white/5 pb-2">Passenger Reviews</h3>
+                <div className="space-y-3">
+                  {(() => {
+                    const driverReviews = reviews.filter(r => {
+                      let isMatch = false;
+                      if (r.rider && String(r.rider._id || r.rider) === String(selectedDriverStats._id)) {
+                        isMatch = true;
+                      } else if (r.ride) {
+                        const rideMatch = rides.find(rd => String(rd._id) === String(r.ride._id || r.ride));
+                        if (rideMatch && rideMatch.rider && String(rideMatch.rider._id || rideMatch.rider) === String(selectedDriverStats._id)) {
+                          isMatch = true;
+                        }
+                      }
+                      
+                      const isByPassenger = r.reviewBy !== 'rider';
+                      return isMatch && isByPassenger;
+                    });
+                    
+                    if (driverReviews.length === 0) {
+                      return <div className="text-center py-8 text-gray-500 text-sm italic bg-white/5 rounded-2xl border border-white/5">No reviews from passengers yet.</div>;
+                    }
+
+                    const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+                    driverReviews.forEach(r => {
+                      if (r.rating >= 1 && r.rating <= 5) {
+                        ratingCounts[Math.floor(r.rating)]++;
+                      }
+                    });
+                    const totalReviews = driverReviews.length;
+
+                    return (
+                      <>
+                        {/* Rating Distribution Chart */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6">
+                          <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Rating Breakdown</h4>
+                          <div className="space-y-2.5">
+                            {[5, 4, 3, 2, 1].map(star => {
+                              const count = ratingCounts[star];
+                              const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                              return (
+                                <div key={star} className="flex items-center gap-3">
+                                  <div className="w-12 text-xs font-bold text-gray-400 flex items-center justify-end gap-1">
+                                    {star} <span className="text-yellow-500 text-[10px]">⭐</span>
+                                  </div>
+                                  <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/5">
+                                    <div 
+                                      className={`h-full rounded-full transition-all duration-1000 ${star >= 4 ? 'bg-green-500' : star === 3 ? 'bg-yellow-500' : 'bg-red-500'}`} 
+                                      style={{ width: `${percentage}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className="w-8 text-xs font-bold text-gray-500">{count}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Individual Reviews */}
+                        {driverReviews.map(r => (
+                      <div key={r._id} className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase border border-blue-500/30">
+                              {r.user?.name ? r.user.name[0] : '?'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white">{r.user?.name || "Unknown Passenger"}</p>
+                              <p className="text-[10px] text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-lg text-xs font-black border border-yellow-500/20">
+                            ⭐ {r.rating}
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-300 ml-10">{r.comment || <span className="italic text-gray-600">No written comment provided.</span>}</p>
+                      </div>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Receipt Modal */}

@@ -60,6 +60,8 @@ const getAdminStats = async (req, res) => {
       }
     });
 
+    const systemRevenue = totalEarnings * 0.25;
+
     // Average rating of riders
     const ridersList = await Rider.find({}, "rating");
     const avgRating = ridersList.length
@@ -104,10 +106,58 @@ const getAdminStats = async (req, res) => {
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const match = revenueAndRidesLast7Days.find((item) => item._id === dateStr);
+      const dayRevenue = match ? match.revenue : 0;
       revenueTrend.push({
         date: dateStr,
         day: d.toLocaleDateString("en-US", { weekday: "short" }),
-        revenue: match ? match.revenue : 0,
+        revenue: dayRevenue,
+        systemRevenue: dayRevenue * 0.25,
+        rides: match ? match.ridesCount : 0,
+      });
+    }
+
+    // 1.5 Revenue & Rides trend over the last 12 months
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+    const revenueAndRidesLast12Months = await Ride.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: twelveMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          revenue: {
+            $sum: {
+              $cond: [
+                { $in: ["$status", ["completed", "started"]] },
+                "$fare",
+                0,
+              ],
+            },
+          },
+          ridesCount: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const monthlyRevenueTrend = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const match = revenueAndRidesLast12Months.find((item) => item._id === monthStr);
+      const monthRevenue = match ? match.revenue : 0;
+      monthlyRevenueTrend.push({
+        date: monthStr,
+        month: d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+        revenue: monthRevenue,
+        systemRevenue: monthRevenue * 0.25,
         rides: match ? match.ridesCount : 0,
       });
     }
@@ -148,6 +198,12 @@ const getAdminStats = async (req, res) => {
       }
     }
 
+    // 2.5 Worst Performing Drivers (Riders) by lowest rating
+    const worstRiders = await Rider.find({})
+      .sort({ rating: 1 })
+      .limit(5)
+      .select("name email phone rating profilePicture vehicle isBlocked");
+
     // 3. Payment Method breakdown
     const paymentBreakdownRaw = await Ride.aggregate([
       { $match: { status: "completed" } },
@@ -178,10 +234,13 @@ const getAdminStats = async (req, res) => {
       totalRides,
       totalReviews,
       totalEarnings,
+      systemRevenue,
       statusBreakdown,
       avgRating: parseFloat(avgRating),
       revenueTrend,
+      monthlyRevenueTrend,
       topRiders,
+      worstRiders,
       paymentBreakdown,
     });
   } catch (error) {

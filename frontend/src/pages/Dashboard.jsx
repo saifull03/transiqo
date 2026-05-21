@@ -206,10 +206,39 @@ const Dashboard = () => {
   };
 
   const handleRouteCalculated = (info) => {
-    setRouteInfo(info);
-    setFare(
-      info ? (200 + info.distance * 21 + info.duration * 3).toFixed(0) : null,
-    );
+    if (!info) {
+      setRouteInfo(null);
+      setFare(null);
+      return;
+    }
+
+    // Traffic Simulation Engine
+    const hour = new Date().getHours();
+    let condition = "clear";
+    let multiplier = 1;
+
+    // Simulate Rush Hours
+    if ((hour >= 8 && hour <= 10) || (hour >= 17 && hour <= 20)) {
+      condition = "heavy";
+      multiplier = 1.6;
+    } else if ((hour >= 11 && hour <= 13) || (hour >= 15 && hour <= 16)) {
+      condition = "moderate";
+      multiplier = 1.3;
+    } else if (hour >= 21 && hour <= 22) {
+      condition = "moderate";
+      multiplier = 1.2;
+    }
+
+    const trafficDuration = info.duration * multiplier;
+    
+    setRouteInfo({ 
+      ...info, 
+      duration: Math.ceil(trafficDuration), 
+      originalDuration: info.duration, 
+      trafficCondition: condition 
+    });
+    
+    setFare((200 + info.distance * 21 + trafficDuration * 3).toFixed(0));
   };
 
   // Helper: start the 30-second countdown after a ride is requested
